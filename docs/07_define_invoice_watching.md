@@ -21,7 +21,7 @@
 
 | To | What leaves | Pattern |
 |---|---|---|
-| Notification Delivery | `SendNotification(channel, payload[refNo, invoiceNo, grossAmount, issuerNip, issuerName?])` — `issuerName?` present iff the simplified list returned it (OQ-1, resolved) | Customer–Supplier + Published Language (`Notifier` interface) |
+| Notification Delivery | `SendNotification(channel, payload[refNo, invoiceNo, netAmount, grossAmount, currency, issuerNip, issuerName?])` — `issuerName?` present iff the simplified list returned it (OQ-1, resolved); both amounts + currency always present, display choice is a config parameter (OQ-16) | Customer–Supplier + Published Language (`Notifier` interface) |
 
 No other context may read or write the registry; it is internal state (invariant below).
 

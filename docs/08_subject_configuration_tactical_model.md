@@ -27,6 +27,6 @@ subjects:
 ```
 
 - `subjects[].nip` is the `SubjectId` source (also: poll-offset derivation A9, per-subject rate budget I-21).
-- `intervalMinutes` → `Interval` (in minutes, default 60 — OQ-2).
+- `intervalMinutes` → `Interval` (in minutes, default 60 — OQ-19).
 - `amountDisplay` per subject (OQ-16); V1 assumes exactly **one** channel per subject (OQ-12 placeholder for fan-out).
 - Search paths (A12): `./config.yaml` → `/etc/ksef-watcher/config.yaml`.

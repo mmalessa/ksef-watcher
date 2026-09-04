@@ -1,6 +1,6 @@
 # KSeF Watcher — DDD Modelling Roadmap
 
-Lightweight pass over [DDD Starter Modelling Process](https://github.com/ddd-crew/ddd-starter-modelling-process) (steps 1–7, light) for **ksef-watcher**: a Linux daemon that periodically checks the simplified list of invoices received by configured subjects (companies) via KSeF (Polish National e-Invoice System, API 2.0) and sends a notification when a new invoice arrives (notifier interface, Discord first).
+Pass over [DDD Starter Modelling Process](https://github.com/ddd-crew/ddd-starter-modelling-process) (steps 1–7, light, plus full tactical design in step 8) for **ksef-watcher**: a Linux daemon that periodically checks the simplified list of invoices received by configured subjects (companies) via KSeF (Polish National e-Invoice System, API 2.0) and sends a notification when a new invoice arrives (notifier interface, Discord first).
 
 ## Working agreement
 
@@ -8,7 +8,7 @@ Lightweight pass over [DDD Starter Modelling Process](https://github.com/ddd-cre
 - The process is non-linear: later steps may reopen earlier ones.
 - Uncertain ⇒ Open Question in the document, not a guess.
 - Artifact language: **English** (conversation may be Polish).
-- Scope of this pass: steps 1–7 (light). Tactical design (8) and architecture (9) come later.
+- Scope of this pass: steps 1–7 (light), plus full tactical design (step 8). Architecture (9) comes later.
 
 ## Status legend
 
@@ -34,11 +34,11 @@ Lightweight pass over [DDD Starter Modelling Process](https://github.com/ddd-cre
 |----------|-------|
 | Artifact language | English |
 | Docs directory | `./docs` |
-| Scope | Steps 1–7, light ("simplified big picture") |
+| Scope | Steps 1–7 (light, "simplified big picture") + full tactical design (step 8); architecture (step 9) not started |
 | Product shape | Open source, multi-tenant (multiple subjects per daemon), self-hosted |
 | Product boundary | Notification-only — never invoice management (viewing/parsing/booking/payments) |
 | Data source | KSeF 2.0 simplified list of received invoices |
-| Notification content | KSeF reference number, issuer invoice number, gross amount, issuer NIP (+ issuer name iff the simplified list returns it); **no per-invoice API calls** (OQ-1/OQ-10 resolved) |
+| Notification content | KSeF reference number, issuer invoice number, net amount + gross amount + currency, issuer NIP (+ issuer name iff the simplified list returns it); **no per-invoice API calls** (OQ-1/OQ-10 resolved); which amount is *displayed* is a per-subject setting (OQ-16, see below) |
 | Persisted state | Per subject: registry of already-notified invoice refs + `lastHwm` HWM cursor — minimal (A3, I-23) |
 | Registry retention | **Resolved (OQ-8): keep forever** — no retention mechanism, no parameter (rows ~40B; deletion is the only irreversible op — Simplicity); future giant ⇒ index the store, don't prune |
 | Downtime behaviour | Catch-up from cursor (`lastHwm` persists; the first poll simply fetches a wider window) |
@@ -46,7 +46,7 @@ Lightweight pass over [DDD Starter Modelling Process](https://github.com/ddd-cre
 | Hot reload safety | Invalid reload ⇒ keep last valid config + loud log (I-16); fail-fast only at startup (I-13) |
 | Subject onboarding | Baseline: first poll marks current list as notified, no historical flood (I-18) |
 | Subject removal | **Resolved (OQ-15): baseline afresh on re-add** — removal deliberately resets state (I-19, updated — supersedes "resume from dormant state"); absence-period notifications are relinquished by the removal; PG-2 scoped to "while configured and watched" |
-| Polling interval | Per subject, **in minutes**, default 60 (OQ-2 resolved) |
+| Polling interval | Per subject, **in minutes**, default 60 (OQ-19 resolved) |
 | KSeF rate limits | **Verified** (official *Limity żądań API*): per pair (context + IP); simplified list 8 req/s · 16 req/min · 20 req/h (bottleneck); session endpoints 120 req/h |
 | Min interval | **≥ 15 min per subject** (MF recommendation, verified) — hard validation bound (I-13a); default 60 min |
 | Poll spreading | **Deterministic poll offset per subject** (`hash(NIP) mod interval`) — load smoothing/politeness (A9); first poll at boot + offset |

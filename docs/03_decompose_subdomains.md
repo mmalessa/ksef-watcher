@@ -8,13 +8,13 @@ Grouping the big-picture events into subdomain candidates and arguing each seam.
 
 ### 1. Invoice Watching *(core candidate)*
 
-- **Events:** `NewInvoicesDetected`, `CursorAdvanced`; consumes `NewInvoiceListFetched`.
+- **Events:** `NewInvoicesDetected`, `CursorAdvanced`; consumes `InvoiceListFetched`.
 - **Responsibility:** decide *what is new* for a subject — fetch by HWM-cursor date window (snapshot mode), diff against the notified-invoice registry, own the cursor semantics (HS-1 closed, OQ-5 resolved → I-23).
 - **Why a seam:** this is the part that carries the product's correctness guarantee ("never miss an invoice, PG-2"). Everything else can be replaced; if this logic is wrong, the product is worthless. It has its own language: *cursor, notified reference, detection, catch-up*.
 
 ### 2. KSeF Access *(supporting)*
 
-- **Events:** `NewInvoiceListFetched`, `SubjectPollFailed`.
+- **Events:** `InvoiceListFetched`, `SubjectPollFailed`.
 - **Responsibility:** all conversation with KSeF API 2.0 — authentication/session lifecycle (HS-2), retrieving the simplified list, translating KSeF's payload into the watcher's internal shape.
 - **Why a seam:** KSeF is an external, government-owned system with its own release cadence, error taxonomy and payload language (`numer KSeF`, session tokens). Isolating it protects the rest from its churn; it is a classic ACL candidate (formalized in Step 7).
 

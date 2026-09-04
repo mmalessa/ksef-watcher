@@ -30,7 +30,7 @@ Configuration data is *read-side input* everywhere (Step 5 conclusion): no conte
 | Term | Meaning |
 |---|---|
 | **Subject** | A watched company: NIP + KSeF credentials + interval + channel binding. |
-| **Interval** | Per-subject polling period (Step 1 decision: per-subject), **expressed in minutes**; default 60 (OQ-2, resolved — A7). |
+| **Interval** | Per-subject polling period (Step 1 decision: per-subject), **expressed in minutes**; default 60 (OQ-19, resolved — A7). |
 | **Poll offset** | Deterministic position of a subject's poll within its interval window: derived from subject identity (`hash(NIP) mod interval`), stable across restarts and reloads — the mechanism that spreads simultaneous intervals into a smooth stream (A9). |
 | **Poll budget** | Upper bound on KSeF polls — **per subject, not global**: KSeF counts limits per pair (context + IP), so each subject (NIP context) has its own 20 req/h budget on the simplified-list endpoint (A7, verified). Enforced as a minimum-interval rule (I-13a): interval ≥ 15 min ⇒ ≤ 4 list calls/hour, well within budget together with session calls (120 req/h). |
 | **Channel** | A notification target descriptor (e.g. `discord-webhook: <url>`). |

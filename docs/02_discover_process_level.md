@@ -17,7 +17,7 @@ sequenceDiagram
     T->>W: PollSubject
     W->>K: FetchInvoiceList(window: from=lastHwm, to=now)
     K-->>W: items + hwm (snapshot mode)
-    Note over W: NewInvoiceListFetched
+    Note over W: InvoiceListFetched
     W->>R: DetectNewInvoices (diff window vs registry)
     Note over W: NewInvoicesDetected (if any unseen)
     W->>N: SendNotification (one per invoice, I-22)
@@ -29,10 +29,10 @@ sequenceDiagram
 ### Walkthrough (commands → events → policies)
 
 1. **Timer fires** (per-subject interval, offset A9) → command **`PollSubject`** to Invoice Watching (the orchestrator).
-2. **`PollSubject`** → Watching commands KSeF Access: **`FetchInvoiceList(window: from=lastHwm, to=now)`** (snapshot mode, all pages until `HasMore = false`) → event **`NewInvoiceListFetched`**.
+2. **`PollSubject`** → Watching commands KSeF Access: **`FetchInvoiceList(window: from=lastHwm, to=now)`** (snapshot mode, all pages until `HasMore = false`) → event **`InvoiceListFetched`**.
    - *External system:* KSeF API 2.0 (fresh session per fetch — A8; simplified invoice list).
    - *Failure branch:* KSeF unreachable/auth failure → `SubjectPollFailed` → log, retry next interval. Never advances the registry or `lastHwm`.
-3. **Policy:** *"whenever `NewInvoiceListFetched`, diff it against the notified-invoice registry"* → command **`DetectNewInvoices`**.
+3. **Policy:** *"whenever `InvoiceListFetched`, diff it against the notified-invoice registry"* → command **`DetectNewInvoices`**.
    - *Read model:* already-notified invoice references per subject (the registry).
    - → event **`NewInvoicesDetected`** (with the full set of unseen references) — or nothing new; cycle ends silently.
 4. **Policy:** *"whenever `NewInvoicesDetected`, notify the subject's channel"* → command **`SendNotification`** (one message per invoice, I-22).
@@ -40,7 +40,7 @@ sequenceDiagram
    - *External system:* messenger API/webhook (Discord first).
    - *Failure branch:* messenger down → hybrid retry (OQ-17: option c) — in-cycle backoff 5s→20s→60s (max 3 attempts), then cycle ends; the next poll re-plans the same window, which is the unbounded, restart-proof retry (PG-2). Registry and `lastHwm` **not** advanced until success — never mark-as-notified on failure (OQ-4, resolved).
    - → event **`InvoicesNotified`**.
-5. **Policy:** *"whenever `InvoicesNotified`, remember those invoices as notified"* → command **`AdvanceCursor`** → event **`CursorAdvanced`**: refs marked in the registry, and only when *every* ref of the window is notified does `lastHwm` advance to the fetch's `hwm` (I-23). Catch-up after downtime is exactly steps 2–5 running over a wider window (`lastHwm` persisted across the downtime) — same code path, no special mode.
+5. **Policy:** *"whenever `InvoicesNotified`, remember those invoices as notified"* → command **`AdvanceCursor`** *(refined in Step 8 into two tactical commands, `MarkNotified` + `AdvanceHwm` — see `08_invoice_watching_aggregates.md`)* → event **`CursorAdvanced`**: refs marked in the registry, and only when *every* ref of the window is notified does `lastHwm` advance to the fetch's `hwm` (I-23). Catch-up after downtime is exactly steps 2–5 running over a wider window (`lastHwm` persisted across the downtime) — same code path, no special mode.
 
 ## Hot spots
 

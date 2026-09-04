@@ -23,7 +23,7 @@
 | Invoice Watching | `InvoiceListFetched(subjectId, items, hwm)` — internal representation, no raw KSeF shapes; `hwm` = translated `PermanentStorageHwmDate` of this fetch, passed through for the caller's cursor decision | Customer–Supplier |
 | (log/monitoring) | `SubjectPollFailed(subjectId, reason)` | event for operator visibility |
 
-**ACL rule:** KSeF concepts (session tokens, error codes, payload field names) must not appear outside this context. Translation happens here: KSeF JSON → `InvoiceListItem { refNo, invoiceNo, grossAmount, issuerNip, issuerName? }` — the translated item carries **only what the simplified list itself returns**; per-invoice detail calls are outside the product boundary (OQ-1/OQ-10, resolved). `issuerName?` is included *if and only if* the simplified list returns it — never fetched separately.
+**ACL rule:** KSeF concepts (session tokens, error codes, payload field names) must not appear outside this context. Translation happens here: KSeF JSON → `DetectedInvoice { refNo, invoiceNo, netAmount, grossAmount, currency, issuerNip, issuerName? }` — the translated item carries **only what the simplified list itself returns**; per-invoice detail calls are outside the product boundary (OQ-1/OQ-10, resolved). `issuerName?` is included *if and only if* the simplified list returns it — never fetched separately.
 
 ## Ubiquitous language
 

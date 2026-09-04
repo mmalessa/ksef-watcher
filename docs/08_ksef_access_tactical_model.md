@@ -8,9 +8,9 @@ Supporting context (ACL). One responsibility (Step 7): *window-in → windowed-r
 
 | Block | Kind | Notes |
 |---|---|---|
-| `InvoiceListItem` | value object | Context-internal translation of one KSeF `InvoiceSummary`: `{Ref, InvoiceNumber, NetAmount, GrossAmount, Currency, IssuerNip, IssuerName?}` — exactly the simplified-list surface (OQ-1), nothing more. |
+| `DetectedInvoice` | value object | Context-internal translation of one KSeF `InvoiceSummary`: `{Ref, InvoiceNumber, NetAmount, GrossAmount, Currency, IssuerNip, IssuerName?}` — exactly the simplified-list surface (OQ-1), nothing more. Same shape as Invoice Watching's `DetectedInvoice` (08_invoice_watching_value_objects.md) — this **is** the shared Published-Language type of the IW↔KSeF Access contract, not a separate one translated again at the boundary. |
 | `FetchWindow` | value object | Shared shape with Invoice Watching (same record type crosses as the parameter — it *is* the contract, Published Language of the port). |
-| `FetchedWindow` | value object | `{refs, detected: IReadOnlyList<InvoiceListItem>, hwm}` — the windowed result handed back. |
+| `FetchedWindow` | value object | `{refs, detected: IReadOnlyList<DetectedInvoice>, hwm}` — the windowed result handed back. |
 | `SubjectCredentials` | value object | `{Nip, Token, Environment}` — read from validated config; never logged (I-14). |
 | `KsefAccessService` | domain service | The single implementation of Invoice Watching's port `IInvoiceListProvider`. Orchestrates: session open → query (all pages) → session close → translate. Owns **no cursor state** (window is a parameter). |
 | `KsefClientAdapter` | infrastructure port | Thin wrapper over the official `ksef-client-csharp` (`IInvoiceDownloadClient.QueryInvoiceMetadataAsync`). The **only** place where C#-client types appear; everything above sees watcher-internal shapes (ACL enforcement point). |
@@ -29,7 +29,7 @@ FetchWindowedList(subjectId, window):
         #   window span ≤ 100 days AND baseline/interval keep result sets far below 10k;
         #   a subject receiving >10k invoices per window would break the whole product's
         #   assumptions — surfaced as PollFailure(ApiError) if it ever occurs (fail loudly, I-8)
-        items = pages.flatMap(p => p.Invoices).map(translate)                    # KSeF → InvoiceListItem
+        items = pages.flatMap(p => p.Invoices).map(translate)                    # KSeF → DetectedInvoice
         hwm   = pages.last.PermanentStorageHwmDate ?? error(I-6: hwm mandatory in snapshot mode)
         return FetchedWindow(items, hwm)
     finally:

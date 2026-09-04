@@ -35,11 +35,11 @@ One structural edge per pair (per "no cycles in structural diagrams" lesson). Th
 |---|---|---|
 | Subject Configuration → all | **Published Language** (config file schema) | Consumers read-only; validated at load **and on every hot reload** (OQ-3, resolved); invalid reload keeps last valid config (I-16). |
 | KSeF (external) → KSeF Access | **ACL** (anti-corruption layer) | KSeF payload shapes, session semantics and error taxonomy are translated at this boundary; nothing KSeF-shaped crosses inward. |
-| KSeF Access → Invoice Watching | **Customer–Supplier** (Watching is the customer) | Contract: `FetchInvoiceList(subject, window{from=lastHwm, to=now})` → `InvoiceListFetched(subject, items[refNo, invoiceNo, grossAmount, issuerNip, issuerName?], hwm)` — the simplified list defines the surface; no per-invoice enrichment (OQ-1/OQ-10, resolved). Watching owns the window and cursor; Access executes and passes `hwm` through. |
+| KSeF Access → Invoice Watching | **Customer–Supplier** (Watching is the customer) | Contract: `FetchInvoiceList(subject, window{from=lastHwm, to=now})` → `InvoiceListFetched(subject, items[refNo, invoiceNo, netAmount, grossAmount, currency, issuerNip, issuerName?], hwm)` — the simplified list defines the surface; no per-invoice enrichment (OQ-1/OQ-10, resolved). Watching owns the window and cursor; Access executes and passes `hwm` through. |
 | Invoice Watching → Notification Delivery | **Customer–Supplier** + **Published Language** (the `Notifier` interface) | Contract: `send(subjectChannel, NotificationPayload)` + delivery result. Watching never learns channel specifics. |
 | Notification Delivery → messengers | ACL per notifier (thin) | Each notifier implementation isolates its API quirks. |
 
-**Model translation at the boundaries:** KSeF's "faktura otrzymana / numer KSeF" becomes the watcher-internal *invoice reference*; the notifier payload renders it as message text. The same invoice has three representations (KSeF JSON → watcher's `InvoiceListItem` → Discord message) and each is owned by its context — no shared invoice model across contexts (no accidental Shared Kernel).
+**Model translation at the boundaries:** KSeF's "faktura otrzymana / numer KSeF" becomes the watcher-internal *invoice reference*; the notifier payload renders it as message text. The same invoice has three representations (KSeF JSON → watcher's `DetectedInvoice` → Discord message) and each is owned by its context — no shared invoice model across contexts (no accidental Shared Kernel).
 
 ## Context ownership summary
 

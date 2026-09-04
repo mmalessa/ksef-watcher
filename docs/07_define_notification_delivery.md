@@ -7,14 +7,13 @@
 | **Name** | Notification Delivery |
 | **Purpose** | Deliver notification payloads to a subject's configured channel(s) via internet messengers (Discord first), reporting a truthful delivery result. |
 | **Strategic classification** | Supporting, deliberately extensible (PG-4: adding a messenger must not touch domain logic). |
-| **Domain roles** | Channel adapter host; owner of the `Notifier` interface (Published Language); executor of delivery retries. |
+| **Domain roles** | Channel adapter host; implementer of the `Notifier` interface (a port owned by Invoice Watching — see `08_invoice_watching_domain_services.md` — expressed here as Published Language); executor of delivery retries. |
 
 ## Inbound communication
 
 | From | What arrives | Pattern |
 |---|---|---|
-| Invoice Watching | `SendNotification(channel, NotificationPayload)` | Customer–Supplier (supplier side) + Published Language |
-| Subject Configuration | Channel definitions (Discord webhook URL / bot config, …) | Published Language (read-only) |
+| Invoice Watching | `SendNotification(channel, NotificationPayload)` — `channel` (`ChannelRef`) already carries its resolved target (e.g. the webhook URL); resolution from Subject Configuration happens once, upstream, in the composition-root/scheduler layer (Step 9) — Notification Delivery never reads Subject Configuration directly | Customer–Supplier (supplier side) + Published Language |
 
 ## Outbound communication
 

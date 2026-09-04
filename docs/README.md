@@ -1,6 +1,6 @@
 # KSeF Watcher — DDD Modelling Roadmap
 
-Pass over [DDD Starter Modelling Process](https://github.com/ddd-crew/ddd-starter-modelling-process) (steps 1–7, light, plus full tactical design in step 8) for **ksef-watcher**: a Linux daemon that periodically checks the simplified list of invoices received by configured subjects (companies) via KSeF (Polish National e-Invoice System, API 2.0) and sends a notification when a new invoice arrives (notifier interface, Discord first).
+Pass over [DDD Starter Modelling Process](https://github.com/ddd-crew/ddd-starter-modelling-process) (steps 1–7, light, plus full tactical design and architecture in steps 8–9) for **ksef-watcher**: a Linux daemon that periodically checks the simplified list of invoices received by configured subjects (companies) via KSeF (Polish National e-Invoice System, API 2.0) and sends a notification when a new invoice arrives (notifier interface, Discord first).
 
 ## Working agreement
 
@@ -8,7 +8,7 @@ Pass over [DDD Starter Modelling Process](https://github.com/ddd-crew/ddd-starte
 - The process is non-linear: later steps may reopen earlier ones.
 - Uncertain ⇒ Open Question in the document, not a guess.
 - Artifact language: **English** (conversation may be Polish).
-- Scope of this pass: steps 1–7 (light), plus full tactical design (step 8). Architecture (9) comes later.
+- Scope of this pass: steps 1–7 (light), plus full tactical design (step 8) and architecture (step 9) — the whole process is now reviewed & accepted end to end.
 
 ## Status legend
 
@@ -26,7 +26,7 @@ Pass over [DDD Starter Modelling Process](https://github.com/ddd-crew/ddd-starte
 | 6 | Organise | Which team would own each context? | [06_organise.md](06_organise.md) | ✅ |
 | 7 | Define | What is each context responsible for? | [07_define_context_map.md](07_define_context_map.md) · [07_define_invoice_watching.md](07_define_invoice_watching.md) · [07_define_notification_delivery.md](07_define_notification_delivery.md) · [07_define_ksef_access.md](07_define_ksef_access.md) · [07_define_subject_configuration.md](07_define_subject_configuration.md) | ✅ |
 | 8 | Code | Aggregates, entities, events inside contexts? | **Invoice Watching:** [domain model](08_invoice_watching_domain_model.md) · [aggregate](08_invoice_watching_aggregates.md) · [value objects](08_invoice_watching_value_objects.md) · [domain services](08_invoice_watching_domain_services.md) · **KSeF Access:** [tactical model](08_ksef_access_tactical_model.md) · **Notification Delivery:** [tactical model](08_notification_delivery_tactical_model.md) · **Subject Configuration:** [no tactical model (justified)](08_subject_configuration_tactical_model.md) | ✅ |
-| 9 | Architecture | How does the model map to implementation? | — | ⏸ |
+| 9 | Architecture | How does the model map to implementation? | [09_architecture.md](09_architecture.md) · [09_integration_contracts.md](09_integration_contracts.md) | ✅ |
 
 ## Decisions log (this pass)
 
@@ -34,7 +34,7 @@ Pass over [DDD Starter Modelling Process](https://github.com/ddd-crew/ddd-starte
 |----------|-------|
 | Artifact language | English |
 | Docs directory | `./docs` |
-| Scope | Steps 1–7 (light, "simplified big picture") + full tactical design (step 8); architecture (step 9) not started |
+| Scope | Steps 1–9 complete: 1–7 (light, "simplified big picture") + full tactical design (step 8) + architecture (step 9) |
 | Product shape | Open source, multi-tenant (multiple subjects per daemon), self-hosted |
 | Product boundary | Notification-only — never invoice management (viewing/parsing/booking/payments) |
 | Data source | KSeF 2.0 simplified list of received invoices |
@@ -74,3 +74,9 @@ Pass over [DDD Starter Modelling Process](https://github.com/ddd-crew/ddd-starte
 | Discord burst throttle | **Resolved (OQ-11):** fixed 3 s delay between messages in the cycle's batch (≤20/min, under the ~30/min webhook limit); stray 429 → existing OQ-17c backoff; hardcoded V1 |
 | Multi-channel fan-out | **Resolved (OQ-12): not in V1** — exactly one channel per subject (validated); reopen on demand, semantics designed then; `channels: []` list placeholder in schema avoids future breaking change |
 | Credentials storage | **Resolved (OQ-13): both** — literal token or `${ENV_VAR}` in config; loader resolves `${...}` from environment; defaults documented as literal + `chmod 600` + dedicated owner; I-14 (never logged) covers both forms |
+| Step 9 — deployment | Single OS process (systemd daemon); cross-context calls are in-process against typed ports — no distributed monolith, no microservices |
+| Step 9 — project structure | One `.csproj` per bounded context (`InvoiceWatching`, `KsefAccess`, `NotificationDelivery`, `SubjectConfiguration`) + a `Host` composition-root project; ports (`IInvoiceListProvider`, `INotifier`, `ISubjectWatchRepository`) and their contract types live in `InvoiceWatching` (the Core), which has zero external dependencies |
+| Step 9 — boundary enforcement | Project references only (compiler-enforced) — no architecture-test tooling at this scale |
+| Step 9 — persistence | **SQLite** (`Microsoft.Data.Sqlite`), single file `state.db`; chosen over plain files (atomic multi-table `Save` for free, per I-4/I-23) and over LiteDB (maturity/durability track record, stable public file format, ubiquitous `sqlite3` tooling for Openness) |
+| Step 9 — scheduler | `BackgroundService` (`IHostedService`) with one `PeriodicTimer` per subject (offset per A9) — no external job-scheduling library |
+| Step 9 — integration contracts | **Deliberately none** for cross-context communication (in-process, compiler-enforced); only external contracts are KSeF API 2.0 (via pinned official `ksef-client-csharp` version) and the Discord webhook API — see `09_integration_contracts.md` |

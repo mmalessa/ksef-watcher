@@ -29,7 +29,7 @@
 Notifier.send(channel: ChannelRef, payload: NotificationPayload) -> DeliveryResult
 ```
 
-- `NotificationPayload` is a *structured* record (refNo, invoiceNo, grossAmount, issuerNip, issuerName?), **not** pre-rendered text — each notifier renders for its medium. Surface rule: payload = only what the simplified list returns; `issuerName?` present iff the list provides it, never fetched per-invoice (OQ-1, resolved).
+- `NotificationPayload` is a *structured* record (`DetectedInvoice`: refNo, invoiceNo, netAmount, grossAmount, currency, issuerNip, issuerName?), **not** pre-rendered text — each notifier renders for its medium. Surface rule: payload = only what the simplified list returns; `issuerName?` present iff the list provides it, never fetched per-invoice (OQ-1, resolved). **Presentation rule (OQ-16, resolved):** the payload carries both amounts + currency and is presentation-agnostic; which amount is displayed comes from the per-subject config (`amountDisplay: brutto | netto`, default `brutto`); the rendered message contains only factual invoice info and the amount — no advisory texts ("pay today…").
 - Pluggable-implementation lesson applied: the interface carries the *whole payload object*, not extracted scalars, so new notifiers can render differently without changing the call signature.
 
 ## Ubiquitous language
@@ -44,7 +44,7 @@ Notifier.send(channel: ChannelRef, payload: NotificationPayload) -> DeliveryResu
 ## Business decisions (invariants)
 
 1. **I-9 Truthful results:** `DeliveryConfirmed` is returned only on real messenger acknowledgement — optimism here breaks I-1 upstream.
-2. **I-10 Retry is here, not upstream:** retry-with-backoff lives in this context; Watching only sees final results. *(OQ-4 resolved — confirmed decision: on failure, refs are NOT marked notified upstream; this context retries with backoff until confirmed or failed-permanent.)*
+2. **I-10 Classify truthfully; retry lives with the caller:** *(refined by OQ-17, option c)* Notification Delivery performs **one delivery attempt per call** and classifies the result: Confirmed / Failed(retryable) / Failed(permanent). The in-cycle backoff loop (3 attempts, 5s→20s→60s) and the unbounded next-poll retry live in the cycle service (the caller) — never inside ND, so the restart-proof guarantee never depends on an in-memory loop. On failure, refs are NOT marked notified upstream — never (OQ-4).
 3. **I-11 Permanent failure surfaces:** a permanently broken channel (revoked webhook) must not be silently retried forever — it is reported (log in V1; escalation mechanism open — OQ-7b, possibly a heartbeat watchdog per OQ-7a). Note the interplay with I-10/OQ-4: retryable failures retry forever (no loss, PG-2), so "permanent" classification (e.g. webhook revoked) is what stops the loop — and it must be reported, not silent.
 4. **I-12 One payload, many renderings:** all required notification content (Step 1 decision) is available to every notifier; no notifier-specific fields in Watching.
 5. **I-22 One message per invoice:** each detected invoice is sent as its own notification message — no digest/aggregation mode (OQ-6, resolved; closes HS-4). Applies uniformly to normal polls and catch-up batches; batch size only affects *how many* messages are sent (sequentially, with a small delay — OQ-11), never their form.

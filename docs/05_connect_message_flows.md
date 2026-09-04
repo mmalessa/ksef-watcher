@@ -60,12 +60,13 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    IW["Invoice Watching"] -->|"SendNotification"| ND["Notification Delivery"]
+    IW["Invoice Watching (cycle service)"] -->|"SendNotification (ND attempts once + classifies)"| ND["Notification Delivery"]
     ND -->|"DeliveryFailed(retryable)"| IW
-    IW -->|"retry with backoff — cursor NOT advanced"| ND
+    IW -->|"hybrid retry (OQ-17c): backoff 5s/20s/60s, max 3 attempts — cursor NOT advanced"| ND
+    IW -->|"attempts exhausted → cycle ends;<br/>next poll re-plans the same window"| NEXT["next scheduled poll<br/>(the unbounded, restart-proof retry)"]
 ```
 
-**Narration.** Cursor stays put, so a daemon crash mid-retry causes at most one duplicate (on the boundary between "sent" and "marked") — never a loss (PG-2, A4). Retry uses backoff until confirmed (OQ-4, resolved: never mark-as-notified on failure). The poll cycle for *other* subjects is unaffected (per-subject isolation).
+**Narration.** Cursor stays put, so a crash between "sent" and "marked" causes at most one duplicate — never a loss (PG-2, A4). Delivery retry is **hybrid** (OQ-17, resolved: option c): ND attempts once and classifies; the cycle service retries with backoff (5s → 20s → 60s, max 3 attempts — catching momentary hiccups within seconds); if exhausted, the cycle ends with no state change and the *next scheduled poll* re-plans the same `lastHwm`-anchored window — the unbounded, restart-proof retry is emergent from the HWM cursor (a dead in-memory loop never loses the guarantee). Never mark-as-notified on failure (OQ-4, resolved). The poll cycle for *other* subjects is unaffected (per-subject isolation).
 
 ## Scenario D: Config hot-reloaded (subject added / removed / changed)
 

@@ -38,7 +38,7 @@ sequenceDiagram
 4. **Policy:** *"whenever `NewInvoicesDetected`, notify the subject's channel"* → command **`SendNotification`** (one message per invoice, I-22).
    - Message payload: only what the simplified list returns — KSeF reference number, issuer invoice number, gross amount, issuer NIP (+ issuer name iff the list provides it). No per-invoice enrichment calls (OQ-1, resolved).
    - *External system:* messenger API/webhook (Discord first).
-   - *Failure branch:* messenger down → retry with backoff, at-least-once (PG-2). Registry and `lastHwm` **not** advanced until success — never mark-as-notified on failure (OQ-4, resolved).
+   - *Failure branch:* messenger down → hybrid retry (OQ-17: option c) — in-cycle backoff 5s→20s→60s (max 3 attempts), then cycle ends; the next poll re-plans the same window, which is the unbounded, restart-proof retry (PG-2). Registry and `lastHwm` **not** advanced until success — never mark-as-notified on failure (OQ-4, resolved).
    - → event **`InvoicesNotified`**.
 5. **Policy:** *"whenever `InvoicesNotified`, remember those invoices as notified"* → command **`AdvanceCursor`** → event **`CursorAdvanced`**: refs marked in the registry, and only when *every* ref of the window is notified does `lastHwm` advance to the fetch's `hwm` (I-23). Catch-up after downtime is exactly steps 2–5 running over a wider window (`lastHwm` persisted across the downtime) — same code path, no special mode.
 

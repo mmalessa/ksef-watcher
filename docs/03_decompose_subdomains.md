@@ -22,11 +22,11 @@ Grouping the big-picture events into subdomain candidates and arguing each seam.
 
 - **Events:** `InvoicesNotified`.
 - **Responsibility:** deliver a notification payload to a subject's channel via the configured notifier (Discord first), with retry semantics.
-- **Why a seam:** the `Notifier` interface is by definition pluggable (PG-4) — new messengers must not touch watching logic. Messengers have their own failure modes (rate limits, outages — retry-with-backoff per OQ-4, resolved) unrelated to KSeF.
+- **Why a seam:** the `Notifier` interface is by definition pluggable (PG-4) — new messengers must not touch watching logic. Messengers have their own failure modes (rate limits, outages — hybrid retry: in-cycle backoff + next-poll re-plan, per OQ-4/OQ-17, resolved) unrelated to KSeF.
 
 ### Supporting concern (not a subdomain): Subject Configuration
 
-- **Events:** `ConfigurationReloaded`, `SubjectOnboarded` *(introduced by the hot-reload decision — see `07_define_subject_configuration.md`)*; otherwise consumed as read data by all three above.
+- **Events:** `ConfigurationReloaded` *(introduced by the hot-reload decision — see `07_define_subject_configuration.md`)*; otherwise consumed as read data by all three above. *Naming note:* `SubjectOnboarded` is **not** this concern's event — Step 8 assigned it to Invoice Watching (raised by the `SubjectWatch` aggregate when a baseline is confirmed, I-18).
 - **Responsibility:** the config file defining subjects (NIP, credentials, interval, channels), plus watching that file and republishing validated configuration on change (hot reload).
 - **Why not a subdomain:** no domain behaviour of its own; its events are plumbing notifications ("config changed"), not business events. It is *shared read-side input*. It still deserves its own bounded context in Step 7 (configuration language and validation), but as a thin, generic one — the seam here is ownership of language ("subject", "channel", "interval"), not business rules.
 

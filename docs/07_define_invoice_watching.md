@@ -43,7 +43,7 @@ No other context may read or write the registry; it is internal state (invariant
 ## Business decisions (invariants)
 
 1. **I-1 No loss:** an invoice reference is marked notified *only after* delivery confirmation — never before.
-2. **I-2 No skip on failure:** a failed delivery leaves the cursor untouched; the reference will be re-detected and re-sent with backoff (OQ-4, resolved) — duplicate possible, loss impossible.
+2. **I-2 No skip on failure:** a failed delivery leaves the cursor untouched; the reference will be re-detected and re-sent — in-cycle backoff (3 attempts, 5s→20s→60s) and, failing that, the next poll's window re-plan (OQ-4 resolved; OQ-17 resolved: option c) — duplicate possible, loss impossible.
 3. **I-3 Per-subject isolation:** one subject's failure (KSeF, notifier) never blocks another subject's cycle.
 4. **I-4 Registry survives restarts:** cursor semantics break if state is volatile (A3) — constrains persistence choice in Step 8/9.
 5. **I-5 Monotonic cursor:** the registry only grows (append notified refs); no removal of "old" refs without an explicit, justified retention policy (OQ-8).

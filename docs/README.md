@@ -25,7 +25,7 @@ Lightweight pass over [DDD Starter Modelling Process](https://github.com/ddd-cre
 | 5 | Connect | How do scenarios flow across boundaries? | [05_connect_message_flows.md](05_connect_message_flows.md) | ✅ |
 | 6 | Organise | Which team would own each context? | [06_organise.md](06_organise.md) | ✅ |
 | 7 | Define | What is each context responsible for? | [07_define_context_map.md](07_define_context_map.md) · [07_define_invoice_watching.md](07_define_invoice_watching.md) · [07_define_notification_delivery.md](07_define_notification_delivery.md) · [07_define_ksef_access.md](07_define_ksef_access.md) · [07_define_subject_configuration.md](07_define_subject_configuration.md) | ✅ |
-| 8 | Code | Aggregates, entities, events inside contexts? | — | ⏸ |
+| 8 | Code | Aggregates, entities, events inside contexts? | [08_invoice_watching_domain_model.md](08_invoice_watching_domain_model.md) · [08_invoice_watching_aggregates.md](08_invoice_watching_aggregates.md) · [08_invoice_watching_value_objects.md](08_invoice_watching_value_objects.md) · [08_invoice_watching_domain_services.md](08_invoice_watching_domain_services.md) | ⏳ |
 | 9 | Architecture | How does the model map to implementation? | — | ⏸ |
 
 ## Decisions log (this pass)
@@ -51,7 +51,7 @@ Lightweight pass over [DDD Starter Modelling Process](https://github.com/ddd-cre
 | Poll spreading | **Deterministic poll offset per subject** (`hash(NIP) mod interval`) — load smoothing/politeness (A9); first poll at boot + offset |
 | Poll budget | **Per subject** (each NIP context has own 20 req/h), **no global fleet cap** (I-21, corrected after docs verification) |
 | KSeF session | **Fresh session per poll** — open, fetch, close; no reuse/renewal (OQ-2 resolved, A8) |
-| Delivery semantics | At-least-once (send-before-mark; duplicate notification acceptable, lost is not) — A4/OQ-4 resolved: on failure NOT marked notified, retry with backoff |
+| Delivery semantics | At-least-once (send-before-mark; duplicate notification acceptable, lost is not) — A4/OQ-4 resolved: on failure NOT marked notified; **hybrid retry** (OQ-17, option c): in-cycle backoff 5s→20s→60s (max 3 attempts), then next poll's window re-plan = unbounded, restart-proof retry |
 | Notification form | **One message per invoice** — no digest mode, normal polls and catch-up uniform (OQ-6 resolved, I-22) |
 | Silent-daemon risk | Open: watchdog heartbeat ("no new invoices" daily, absence = alarm) OQ-7a vs permanent-failure escalation OQ-7b — candidate direction: heartbeat |
 | Detection mechanism | **HWM-cursor window-fetch + registry-diff** (OQ-5 resolved, I-23): window `From = lastHwm → now` in snapshot mode, paginate all pages, dedupe by `KsefNumber` vs notified-refs registry; `lastHwm` advances only when the whole window is notified (send-before-mark applies to the cursor, not just the registry) — pattern from official C# client's incremental-retrieval E2E |
@@ -61,3 +61,8 @@ Lightweight pass over [DDD Starter Modelling Process](https://github.com/ddd-cre
 | KSeF auth | Token generated in KSeF (+ NIP where required), not certificates — A11 |
 | Config format | **YAML** `config.yaml`; search paths: binary dir, then `/etc/ksef-watcher/` (A12; OQ-14 resolved) |
 | Test environments | KSeF sandboxes only (`api-test`, `api-demo`), never production — A13 |
+| Step 8 — aggregate shape | One `SubjectWatch` aggregate per subject: `notifiedRefs` + `lastHwm` persistent, `pendingWindow` **transient** (crash ⇒ same window re-planned: duplicate at worst, never loss); commands: `ConfirmBaseline`, `PlanFetch`, `Detect`, `MarkNotified`, `AdvanceHwm` |
+| Step 8 — ports | `IInvoiceListProvider` (window-in → windowed result, no provider-side cursor) + `INotifier` (whole `DetectedInvoice` per message); `PollCycle` orchestrates and owns no state |
+| Step 8 — deliberate absences | No entities (nothing has a lifecycle), no read models (detection must see command-mutated state), no integration events (in-process contracts in a monolith); domain events stay inside the context |
+| Notification content — currency? | **Resolved (OQ-16):** payload carries `netAmount` + `grossAmount` + `currency` (all from the simplified list); **which amount is displayed** is a per-subject config setting (`amountDisplay: brutto \| netto`, default `brutto`), consumed at render time; message = factual invoice info + amount only, no advisory texts |
+| Retry split | **Resolved (OQ-17: option c, hybrid):** ND attempts once + classifies; cycle service holds the in-cycle backoff (3 attempts, 5s→20s→60s, hardcoded V1); unbounded retry = next-poll re-plan, emergent from the HWM cursor — I-10 refined accordingly ("retry lives with the caller") |

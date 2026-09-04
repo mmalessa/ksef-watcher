@@ -34,6 +34,7 @@ Configuration data is *read-side input* everywhere (Step 5 conclusion): no conte
 | **Poll offset** | Deterministic position of a subject's poll within its interval window: derived from subject identity (`hash(NIP) mod interval`), stable across restarts and reloads — the mechanism that spreads simultaneous intervals into a smooth stream (A9). |
 | **Poll budget** | Upper bound on KSeF polls — **per subject, not global**: KSeF counts limits per pair (context + IP), so each subject (NIP context) has its own 20 req/h budget on the simplified-list endpoint (A7, verified). Enforced as a minimum-interval rule (I-13a): interval ≥ 15 min ⇒ ≤ 4 list calls/hour, well within budget together with session calls (120 req/h). |
 | **Channel** | A notification target descriptor (e.g. `discord-webhook: <url>`). |
+| **Amount display** | Per-subject notification rendering parameter: which amount the message shows — `brutto` (default) or `netto` (OQ-16, resolved). A display setting, not data: the payload always carries both amounts + currency; this parameter is consumed by Notification Delivery at render time. |
 | **Environment** | KSeF test vs production flag (OQ-9). |
 
 *(Terminology note: "Subject" and "Channel" are shared with other contexts' canvases deliberately — this context is the definition source; others consume.)*

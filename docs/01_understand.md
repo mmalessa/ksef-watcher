@@ -1,6 +1,6 @@
 # Step 1 — Understand
 
-**Status:** ⏳ drafted
+**Status:** ✅ reviewed & accepted (steps 1–7 pass)
 
 ## Project vision
 

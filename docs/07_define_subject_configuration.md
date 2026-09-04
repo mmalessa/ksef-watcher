@@ -1,6 +1,6 @@
 # Step 7e — Define: Subject Configuration (Bounded Context Canvas)
 
-**Status:** ⏳ drafted · **Classification:** Generic (thin)
+**Status:** ✅ reviewed & accepted (steps 1–7 pass) · **Classification:** Generic (thin)
 
 | Field | Value |
 |---|---|

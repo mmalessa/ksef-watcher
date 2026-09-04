@@ -1,6 +1,6 @@
 # Step 7c — Define: KSeF Access (Bounded Context Canvas)
 
-**Status:** ⏳ drafted · **Classification:** Supporting (ACL)
+**Status:** ✅ reviewed & accepted (steps 1–7 pass) · **Classification:** Supporting (ACL)
 
 | Field | Value |
 |---|---|

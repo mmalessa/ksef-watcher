@@ -1,6 +1,6 @@
 # Step 2a — Discover: Big Picture EventStorming
 
-**Status:** ⏳ drafted
+**Status:** ✅ reviewed & accepted (steps 1–7 pass)
 
 Simplified big-picture pass: domain events (orange, past tense) on a rough timeline, with actors and loose areas. This is the simplified big picture requested for this phase — process-level detail follows in [02_discover_process_level.md](02_discover_process_level.md).
 

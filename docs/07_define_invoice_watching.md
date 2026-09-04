@@ -1,6 +1,6 @@
 # Step 7b — Define: Invoice Watching (Bounded Context Canvas)
 
-**Status:** ⏳ drafted · **Classification:** Core Domain
+**Status:** ✅ reviewed & accepted (steps 1–7 pass) · **Classification:** Core Domain
 
 | Field | Value |
 |---|---|

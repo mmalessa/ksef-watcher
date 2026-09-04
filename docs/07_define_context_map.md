@@ -1,6 +1,6 @@
 # Step 7a — Define: Context Map
 
-**Status:** ⏳ drafted
+**Status:** ✅ reviewed & accepted (steps 1–7 pass)
 
 ## Diagram
 

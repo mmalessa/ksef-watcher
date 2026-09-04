@@ -1,6 +1,6 @@
 # Step 3 — Decompose: Subdomain candidates
 
-**Status:** ⏳ drafted
+**Status:** ✅ reviewed & accepted (steps 1–7 pass)
 
 Grouping the big-picture events into subdomain candidates and arguing each seam. Small domain, so only three candidates plus a supporting concern.
 

@@ -1,6 +1,6 @@
 # Step 4 — Strategize: Core Domain Chart
 
-**Status:** ⏳ drafted
+**Status:** ✅ reviewed & accepted (steps 1–7 pass)
 
 ## Chart (complexity × differentiation)
 

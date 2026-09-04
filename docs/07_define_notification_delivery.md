@@ -1,6 +1,6 @@
 # Step 7d — Define: Notification Delivery (Bounded Context Canvas)
 
-**Status:** ⏳ drafted · **Classification:** Supporting (pluggable)
+**Status:** ✅ reviewed & accepted (steps 1–7 pass) · **Classification:** Supporting (pluggable)
 
 | Field | Value |
 |---|---|

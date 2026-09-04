@@ -1,6 +1,6 @@
 # Step 5 — Connect: Domain Message Flows
 
-**Status:** ⏳ drafted
+**Status:** ✅ reviewed & accepted (steps 1–7 pass)
 
 Two scenarios flow across context boundaries. Same four contexts as Step 3/4: **Subject Configuration**, **KSeF Access**, **Invoice Watching**, **Notification Delivery**.
 

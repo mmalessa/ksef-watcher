@@ -1,6 +1,6 @@
 # Step 2b — Discover: Process Level (single flow)
 
-**Status:** ⏳ drafted
+**Status:** ✅ reviewed & accepted (steps 1–7 pass)
 
 Zoom into the one end-to-end process of this system: **"notify about a newly received invoice"**. One flow, linear — the whole domain so far fits a single process-level storm.
 

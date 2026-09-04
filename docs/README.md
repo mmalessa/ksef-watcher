@@ -18,13 +18,13 @@ Lightweight pass over [DDD Starter Modelling Process](https://github.com/ddd-cre
 
 | # | Step | Key question | Artifact(s) | Status |
 |---|------|--------------|-------------|--------|
-| 1 | Understand | Why does this exist and for whom? | [01_understand.md](01_understand.md) | ⏳ |
-| 2 | Discover | Which events and processes form the domain? | [02_discover_big_picture.md](02_discover_big_picture.md) · [02_discover_process_level.md](02_discover_process_level.md) | ⏳ |
-| 3 | Decompose | Where are the natural seams? | [03_decompose_subdomains.md](03_decompose_subdomains.md) | ⏳ |
-| 4 | Strategize | What differentiates, what is plumbing? | [04_strategize_core_domain_chart.md](04_strategize_core_domain_chart.md) | ⏳ |
-| 5 | Connect | How do scenarios flow across boundaries? | [05_connect_message_flows.md](05_connect_message_flows.md) | ⏳ |
-| 6 | Organise | Which team would own each context? | [06_organise.md](06_organise.md) | ⏳ |
-| 7 | Define | What is each context responsible for? | [07_define_context_map.md](07_define_context_map.md) · [07_define_invoice_watching.md](07_define_invoice_watching.md) · [07_define_notification_delivery.md](07_define_notification_delivery.md) · [07_define_ksef_access.md](07_define_ksef_access.md) · [07_define_subject_configuration.md](07_define_subject_configuration.md) | ⏳ |
+| 1 | Understand | Why does this exist and for whom? | [01_understand.md](01_understand.md) | ✅ |
+| 2 | Discover | Which events and processes form the domain? | [02_discover_big_picture.md](02_discover_big_picture.md) · [02_discover_process_level.md](02_discover_process_level.md) | ✅ |
+| 3 | Decompose | Where are the natural seams? | [03_decompose_subdomains.md](03_decompose_subdomains.md) | ✅ |
+| 4 | Strategize | What differentiates, what is plumbing? | [04_strategize_core_domain_chart.md](04_strategize_core_domain_chart.md) | ✅ |
+| 5 | Connect | How do scenarios flow across boundaries? | [05_connect_message_flows.md](05_connect_message_flows.md) | ✅ |
+| 6 | Organise | Which team would own each context? | [06_organise.md](06_organise.md) | ✅ |
+| 7 | Define | What is each context responsible for? | [07_define_context_map.md](07_define_context_map.md) · [07_define_invoice_watching.md](07_define_invoice_watching.md) · [07_define_notification_delivery.md](07_define_notification_delivery.md) · [07_define_ksef_access.md](07_define_ksef_access.md) · [07_define_subject_configuration.md](07_define_subject_configuration.md) | ✅ |
 | 8 | Code | Aggregates, entities, events inside contexts? | — | ⏸ |
 | 9 | Architecture | How does the model map to implementation? | — | ⏸ |
 

@@ -1,6 +1,6 @@
 # Step 8d — Code: Invoice Watching — Domain Services (ports)
 
-**Status:** ⏳ drafted
+**Status:** ✅ reviewed & accepted
 
 ## Why domain services here
 
@@ -63,7 +63,7 @@ PollCycle.Run(subjectId, channel, amountDisplay, provider, notifier):
 |---|---|
 | Baseline = narrow window, no sends, only HWM set | I-18 (updated for HWM in the 1–7 review) |
 | Window from `lastHwm` (exclusive), snapshot, all pages | I-23, A7-verified API facts |
-| One `Send` per detected invoice, sequential | I-22, OQ-6, OQ-11 default |
+| One `Send` per detected invoice, sequential with fixed 3 s inter-message delay (≤20/min, under Discord's ~30/min webhook limit) | I-22, OQ-6, OQ-11 resolved |
 | Hybrid retry: up to 3 attempts in-cycle (backoff 5s → 20s → 60s, hardcoded V1), then the next poll's window re-plan **is** the unbounded retry (OQ-17, resolved: option c) | OQ-4, I-2, PG-1 |
 | Permanent failure stops the batch, nothing marked, surfaced loudly | I-11, PG-2 |
 | `AdvanceHwm` only after whole window notified | I-23 (the crash-safety fix from the consistency review) |

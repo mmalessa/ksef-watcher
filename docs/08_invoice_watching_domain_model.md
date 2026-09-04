@@ -1,6 +1,6 @@
 # Step 8a — Code: Invoice Watching — Domain Model (overview)
 
-**Status:** ⏳ drafted
+**Status:** ✅ reviewed & accepted
 
 Tactical model of the Core Domain. The context's job (decided in Step 7): decide what is new per subject, orchestrate the poll cycle, own the cursor — never miss an invoice (PG-2).
 

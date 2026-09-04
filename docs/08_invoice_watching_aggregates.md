@@ -1,6 +1,6 @@
 # Step 8b — Code: Invoice Watching — Aggregate
 
-**Status:** ⏳ drafted
+**Status:** ✅ reviewed & accepted
 
 ## Aggregate: `SubjectWatch`
 
@@ -37,12 +37,24 @@ One instance per subject (identified by `SubjectId`). It is the *entire* persist
 | **I-4 Registry survives restarts** | `notifiedRefs` + `lastHwm` are the persistent half of the state; `pendingWindow` is transient by design (see above). |
 | **I-5 Monotonic cursor** | `MarkNotified` is append-only; no command removes refs. |
 | **I-18 Baseline** | `ConfirmBaseline` is the only setter of a first `lastHwm`; it populates no refs. |
-| **I-19/20 Dormant state on removal/reload** | Aggregate instances are keyed by `SubjectId`; config removal stops the timer but no command deletes state; re-add resumes with the same instance. |
+| **I-19/20 Reset-on-removal / safe reload** | Aggregate instances are keyed by `SubjectId`; a config-removal **reset** is a deliberate domain operation (repository delete + timer stop — OQ-15, I-19); a reload changes only timers/parameters otherwise (I-20). |
 | **I-23 HWM follows the registry** | `AdvanceHwm`'s guard (`pendingWindow.refs ⊆ notifiedRefs`) is the invariant in code terms. |
 
 ### References to other aggregates
 
 None. Other contexts are reached through ports (`IInvoiceListProvider`, `INotifier`) owned by this context's application layer — the aggregate itself holds no external references (not even by ID: `SubjectId` is its own identity).
+
+### Repository contract (tactical boundary)
+
+```text
+ISubjectWatchRepository
+    Load(subjectId: SubjectId) -> SubjectWatch        # returns a fresh instance; persistent state loaded,
+                                                      # pendingWindow always empty (transient by design)
+    Save(subject: SubjectWatch)                        # persists notifiedRefs + lastHwm atomically
+```
+
+- `Save` is idempotent-safe by construction: state only grows via `MarkNotified`/`AdvanceHwm`, so a crash between send and save re-plans the same window (I-23 crash semantics) — no write-ahead coordination with the notifier is required.
+- The repository is the context's **only** persistence seam (Step 9 picks the concrete store; the aggregate never sees it).
 
 ### Consistency boundaries
 

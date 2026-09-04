@@ -49,4 +49,4 @@
 
 ## Open questions
 
-- **OQ-9** KSeF test vs production environment switching: per-subject, global, or both? (Config language decision; default: per-subject flag.)
+- **OQ-9** *Resolved.* KSeF environment switching: **global file-level default + per-subject override** — `defaultEnvironment` in `config.yaml` (default value: `test`), a subject may set `environment: test | prod` explicitly. Rationale: new subjects inherit the safe default (hard to hit production by accident); switching a subject to prod is a conscious, visible act. Mixing environments within one daemon stays allowed (test alongside prod subjects — the daemon keeps per-subject state regardless).

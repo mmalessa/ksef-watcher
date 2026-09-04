@@ -35,7 +35,7 @@ Configuration data is *read-side input* everywhere (Step 5 conclusion): no conte
 | **Poll budget** | Upper bound on KSeF polls — **per subject, not global**: KSeF counts limits per pair (context + IP), so each subject (NIP context) has its own 20 req/h budget on the simplified-list endpoint (A7, verified). Enforced as a minimum-interval rule (I-13a): interval ≥ 15 min ⇒ ≤ 4 list calls/hour, well within budget together with session calls (120 req/h). |
 | **Channel** | A notification target descriptor (e.g. `discord-webhook: <url>`). |
 | **Amount display** | Per-subject notification rendering parameter: which amount the message shows — `brutto` (default) or `netto` (OQ-16, resolved). A display setting, not data: the payload always carries both amounts + currency; this parameter is consumed by Notification Delivery at render time. |
-| **Environment** | KSeF test vs production flag (OQ-9). |
+| **Environment** | KSeF test vs production: **file-level `defaultEnvironment` (default `test`) + per-subject override** (OQ-9, resolved) — new subjects inherit the safe default; going prod is explicit. |
 
 *(Terminology note: "Subject" and "Channel" are shared with other contexts' canvases deliberately — this context is the definition source; others consume.)*
 
@@ -52,10 +52,10 @@ Configuration data is *read-side input* everywhere (Step 5 conclusion): no conte
 ## Assumptions
 
 - Operator-edited file (A5); auto-reload via file watching (decision: automatic, no signal required — OQ-3 resolved).
-- Credentials live in the file (self-hosted trust model) or are referenced from it (env var / external secrets — Step 9 choice, OQ-13).
+- **Credentials (OQ-13, resolved): both** — the schema accepts a literal token or an `${ENV_VAR}` reference; the config loader resolves `${...}` from the environment, treats anything else as the literal value. Defaults documented as literal + `chmod 600` + dedicated owner; env-var refs for operators with no-secrets-in-config policies. I-14 (never logged) covers both forms — logs never echo the raw token nor the resolved value; a validation error references the field path only.
 
 ## Open questions
 
-- **OQ-15** When a subject is removed from config and later re-added, should hot reload run baseline again or resume from the retained registry? Default decision: resume (registry retained — I-19 in `07_define_invoice_watching.md`); baseline never re-runs on non-empty registry.
-- **OQ-13** Credentials in-file (simple, self-hosted) vs external secret reference (better practice, more moving parts). Default proposal: in-file with `0600` file perms documented; external refs as a future option.
+- **OQ-15** *Resolved: baseline afresh on re-add* — removing a subject from config deliberately resets its state (I-19, updated); re-adding runs a fresh baseline (I-18). *Supersedes the earlier "resume from retained state" default.* Removal is a conscious operator choice: the absence period's notifications are relinquished by that choice.
 - **OQ-14** Config file format (YAML vs TOML) — **resolved:** YAML, `config.yaml`, search paths per A12 (`prompt.md` operator decision).
+- **OQ-13** Credentials — **resolved: both** (literal or `${ENV_VAR}`, loader resolves; see Assumptions above).

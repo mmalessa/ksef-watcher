@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Core Domain (docs/04_strategize_core_domain_chart.md). Deliberately zero PackageReferences:
+       must stay buildable and unit-testable with fakes only (docs/06_organise.md). -->
+
+</Project>

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Supporting, pluggable (docs/07_define_notification_delivery.md). No Subject Configuration
+       reference — channel resolution happens upstream in Host (docs/09_architecture.md). -->
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\KsefWatcher.InvoiceWatching\KsefWatcher.InvoiceWatching.csproj" />
+  </ItemGroup>
+
+</Project>

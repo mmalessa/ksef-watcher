@@ -1,0 +1,70 @@
+using System.Net;
+using KsefWatcher.InvoiceWatching.ValueObjects;
+using KsefWatcher.NotificationDelivery.Notifiers;
+using KsefWatcher.NotificationDelivery.Tests.TestDoubles;
+using Xunit;
+
+namespace KsefWatcher.NotificationDelivery.Tests;
+
+public class DiscordNotifierTests
+{
+    private static ChannelRef AnyChannel => new("discord", "https://example.invalid/webhook/abc");
+
+    [Fact]
+    public void ChannelType_IsDiscord()
+    {
+        var sut = new DiscordNotifier(new HttpClient(new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.NoContent))));
+
+        Assert.Equal("discord", sut.ChannelType);
+    }
+
+    [Fact]
+    public async Task Success_PostsToChannelTarget_WithMessageAsJsonContent_ReturnsAcknowledged()
+    {
+        var handler = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.NoContent));
+        var sut = new DiscordNotifier(new HttpClient(handler));
+
+        var outcome = await sut.SendAsync(AnyChannel, "New invoice received", CancellationToken.None);
+
+        Assert.IsType<ChannelSendOutcome.Acknowledged>(outcome);
+        Assert.Equal(AnyChannel.Target, handler.LastRequest!.RequestUri!.ToString());
+        Assert.Contains("New invoice received", handler.LastRequestBody);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.TooManyRequests)]
+    [InlineData(HttpStatusCode.NotFound)]
+    [InlineData(HttpStatusCode.InternalServerError)]
+    public async Task NonSuccessStatusCode_ReturnsHttpFailure_WithTheStatusCode(HttpStatusCode statusCode)
+    {
+        var handler = new FakeHttpMessageHandler(_ => new HttpResponseMessage(statusCode));
+        var sut = new DiscordNotifier(new HttpClient(handler));
+
+        var outcome = await sut.SendAsync(AnyChannel, "message", CancellationToken.None);
+
+        var failure = Assert.IsType<ChannelSendOutcome.HttpFailure>(outcome);
+        Assert.Equal((int)statusCode, failure.StatusCode);
+    }
+
+    [Fact]
+    public async Task ConnectionRefused_ReturnsTransportFailure()
+    {
+        var handler = new FakeHttpMessageHandler(_ => throw new HttpRequestException("Connection refused"));
+        var sut = new DiscordNotifier(new HttpClient(handler));
+
+        var outcome = await sut.SendAsync(AnyChannel, "message", CancellationToken.None);
+
+        Assert.IsType<ChannelSendOutcome.TransportFailure>(outcome);
+    }
+
+    [Fact]
+    public async Task Timeout_ReturnsTransportFailure()
+    {
+        var handler = new FakeHttpMessageHandler(_ => throw new TaskCanceledException("Timed out", new TimeoutException()));
+        var sut = new DiscordNotifier(new HttpClient(handler));
+
+        var outcome = await sut.SendAsync(AnyChannel, "message", CancellationToken.None);
+
+        Assert.IsType<ChannelSendOutcome.TransportFailure>(outcome);
+    }
+}

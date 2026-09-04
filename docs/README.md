@@ -49,6 +49,7 @@ Pass over [DDD Starter Modelling Process](https://github.com/ddd-crew/ddd-starte
 | Polling interval | Per subject, **in minutes**, default 60 (OQ-19 resolved) |
 | KSeF rate limits | **Verified** (official *Limity żądań API*): per pair (context + IP); simplified list 8 req/s · 16 req/min · 20 req/h (bottleneck); session endpoints 120 req/h |
 | Min interval | **≥ 15 min per subject** (MF recommendation, verified) — hard validation bound (I-13a); default 60 min |
+| Max interval | **≤ 10080 min (7 days) per subject** — operator decision, guards against config typos producing a near-dormant subject (I-13b) |
 | Poll spreading | **Deterministic poll offset per subject** (`hash(NIP) mod interval`) — load smoothing/politeness (A9); first poll at boot + offset |
 | Poll budget | **Per subject** (each NIP context has own 20 req/h), **no global fleet cap** (I-21, corrected after docs verification) |
 | KSeF session | **Fresh session per poll** — open, fetch, close; no reuse/renewal (OQ-2 resolved, A8) |

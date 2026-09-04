@@ -1,2 +1,9 @@
 /.idea
+/temp.txt
+# .NET build output
+bin/
+obj/
+
+# Vendored external dependency (public repo, cloned locally — see vendor/README.md)
+/vendor/
 

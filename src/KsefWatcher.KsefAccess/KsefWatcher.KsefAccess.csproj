@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Supporting, ACL (docs/07_define_ksef_access.md). The official ksef-client-csharp is
+       vendored (not a NuGet package — see vendor/README.md for why) and referenced directly as
+       a ProjectReference; KsefClientAdapter (docs/08_ksef_access_tactical_model.md) is the only
+       file that may reference its types (ACL enforcement point, docs/09_integration_contracts.md). -->
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\KsefWatcher.InvoiceWatching\KsefWatcher.InvoiceWatching.csproj" />
+    <ProjectReference Include="..\KsefWatcher.SubjectConfiguration\KsefWatcher.SubjectConfiguration.csproj" />
+    <ProjectReference Include="..\..\vendor\ksef-client-csharp\KSeF.Client\KSeF.Client.csproj" />
+    <ProjectReference Include="..\..\vendor\ksef-client-csharp\KSeF.Client.ClientFactory\KSeF.Client.ClientFactory.csproj" />
+  </ItemGroup>
+
+</Project>

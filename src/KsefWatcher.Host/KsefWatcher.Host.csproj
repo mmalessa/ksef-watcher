@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <UserSecretsId>ksef-watcher-host</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\KsefWatcher.InvoiceWatching\KsefWatcher.InvoiceWatching.csproj" />
+    <ProjectReference Include="..\KsefWatcher.KsefAccess\KsefWatcher.KsefAccess.csproj" />
+    <ProjectReference Include="..\KsefWatcher.NotificationDelivery\KsefWatcher.NotificationDelivery.csproj" />
+    <ProjectReference Include="..\KsefWatcher.SubjectConfiguration\KsefWatcher.SubjectConfiguration.csproj" />
+    <!-- Composition-root exception to the ACL rule: wiring necessarily references concrete
+         vendored types (docs/09_integration_contracts.md) — KsefClientAdapter stays the only
+         place that translates them into domain-shaped data. -->
+    <ProjectReference Include="..\..\vendor\ksef-client-csharp\KSeF.Client.ClientFactory\KSeF.Client.ClientFactory.csproj" />
+  </ItemGroup>
+
+</Project>

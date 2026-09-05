@@ -23,9 +23,22 @@ public sealed class KsefAccessService(
     public async Task<FetchedWindow> FetchWindowedListAsync(SubjectId subjectId, FetchWindow window, CancellationToken cancellationToken)
     {
         var credentials = credentialsStore.Current(subjectId);
-        var session = await client.OpenSessionAsync(credentials, cancellationToken);
+        KsefSession? session = null;
         try
         {
+            try
+            {
+                session = await client.OpenSessionAsync(credentials, cancellationToken);
+            }
+            catch (KsefRateLimitedException ex)
+            {
+                throw LogAndBuildRateLimitedFailure(subjectId, ex);
+            }
+            catch (KsefAuthFailedException ex)
+            {
+                throw LogAndBuildAuthFailure(subjectId, ex);
+            }
+
             var items = new List<DetectedInvoice>();
             DateTimeOffset? hwmUtc = null;
 
@@ -41,8 +54,11 @@ public sealed class KsefAccessService(
                     }
                     catch (KsefRateLimitedException ex)
                     {
-                        _logger.LogWarning("SubjectPollFailed for {SubjectId}: rate limited, retry after {RetryAfter} (I-8).", subjectId, ex.RetryAfter);
-                        throw new PollFailureException(new PollFailure.RateLimited(ex.RetryAfter));
+                        throw LogAndBuildRateLimitedFailure(subjectId, ex);
+                    }
+                    catch (KsefAuthFailedException ex)
+                    {
+                        throw LogAndBuildAuthFailure(subjectId, ex);
                     }
 
                     pages.Add(page);
@@ -73,7 +89,10 @@ public sealed class KsefAccessService(
         }
         finally
         {
-            await client.CloseSessionAsync(session, cancellationToken);
+            if (session is not null)
+            {
+                await client.CloseSessionAsync(session, cancellationToken);
+            }
         }
     }
 
@@ -93,6 +112,20 @@ public sealed class KsefAccessService(
             yield return (chunkFrom, chunkTo);
             chunkFrom = chunkTo;
         }
+    }
+
+    private PollFailureException LogAndBuildRateLimitedFailure(SubjectId subjectId, KsefRateLimitedException ex)
+    {
+        _logger.LogWarning("SubjectPollFailed for {SubjectId}: rate limited, retry after {RetryAfter} (I-8).", subjectId, ex.RetryAfter);
+        return new PollFailureException(new PollFailure.RateLimited(ex.RetryAfter));
+    }
+
+    /// <summary>OQ-18: permanent, never self-heals — logged Error on every poll (no suppression),
+    /// so the operator sees it recur until config.yaml's token is fixed.</summary>
+    private PollFailureException LogAndBuildAuthFailure(SubjectId subjectId, KsefAuthFailedException ex)
+    {
+        _logger.LogError("SubjectPollFailed for {SubjectId}: auth rejected (I-8, OQ-18): {Reason}", subjectId, ex.Message);
+        return new PollFailureException(new PollFailure.AuthFailure());
     }
 
     private static DetectedInvoice Translate(KsefInvoiceSummary raw) =>

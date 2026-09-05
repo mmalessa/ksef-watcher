@@ -10,7 +10,7 @@ namespace KsefWatcher.NotificationDelivery.Notifiers;
 /// message (<see cref="NotificationRenderer"/> runs in <c>DeliveryService</c>, upstream) — this
 /// class only knows how to post text to a webhook and classify the raw transport outcome.
 /// </summary>
-public sealed class DiscordNotifier(HttpClient httpClient) : IChannelSender
+public sealed class DiscordNotifier(IHttpClientFactory httpClientFactory) : IChannelSender
 {
     public string ChannelType => "discord";
 
@@ -21,6 +21,10 @@ public sealed class DiscordNotifier(HttpClient httpClient) : IChannelSender
 
         try
         {
+            // A fresh client per call (not cached on this class) — this class is a long-lived
+            // singleton, and only calling CreateClient() per use lets IHttpClientFactory actually
+            // rotate the underlying handler (stale DNS, dead connections) as designed.
+            var httpClient = httpClientFactory.CreateClient(nameof(DiscordNotifier));
             var response = await httpClient.PostAsync(channel.Target, body, cancellationToken);
 
             return response.IsSuccessStatusCode

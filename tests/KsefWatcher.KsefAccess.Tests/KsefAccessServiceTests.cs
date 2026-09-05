@@ -179,6 +179,62 @@ public class KsefAccessServiceTests
     }
 
     [Fact]
+    public async Task OpenSessionRateLimited_ClassifiesAsPollFailure_PreservesRetryAfter()
+    {
+        var retryAfter = TimeSpan.FromSeconds(42);
+        var client = new FakeKsefQueryClient([], openSessionException: new KsefRateLimitedException(retryAfter));
+        var sut = new KsefAccessService(client, new FakeCredentialsStore(AnyCredentials));
+
+        var ex = await Assert.ThrowsAsync<PollFailureException>(() =>
+            sut.FetchWindowedListAsync(AnySubjectId, AnyWindow, CancellationToken.None));
+
+        var reason = Assert.IsType<PollFailure.RateLimited>(ex.Reason);
+        Assert.Equal(retryAfter, reason.RetryAfter);
+        Assert.Empty(client.CloseSessionCalls); // no session was ever opened
+    }
+
+    [Fact]
+    public async Task OpenSessionRateLimited_LogsWarning()
+    {
+        var client = new FakeKsefQueryClient([], openSessionException: new KsefRateLimitedException(TimeSpan.FromSeconds(42)));
+        var logger = new FakeLogger<KsefAccessService>();
+        var sut = new KsefAccessService(client, new FakeCredentialsStore(AnyCredentials), logger);
+
+        await Assert.ThrowsAsync<PollFailureException>(() =>
+            sut.FetchWindowedListAsync(AnySubjectId, AnyWindow, CancellationToken.None));
+
+        var entry = Assert.Single(logger.Entries);
+        Assert.Equal(LogLevel.Warning, entry.Level);
+    }
+
+    [Fact]
+    public async Task OpenSessionAuthFailed_ClassifiesAsPollFailure()
+    {
+        var client = new FakeKsefQueryClient([], openSessionException: new KsefAuthFailedException("Token rejected"));
+        var sut = new KsefAccessService(client, new FakeCredentialsStore(AnyCredentials));
+
+        var ex = await Assert.ThrowsAsync<PollFailureException>(() =>
+            sut.FetchWindowedListAsync(AnySubjectId, AnyWindow, CancellationToken.None));
+
+        Assert.IsType<PollFailure.AuthFailure>(ex.Reason);
+        Assert.Empty(client.CloseSessionCalls); // no session was ever opened
+    }
+
+    [Fact]
+    public async Task OpenSessionAuthFailed_LogsError()
+    {
+        var client = new FakeKsefQueryClient([], openSessionException: new KsefAuthFailedException("Token rejected"));
+        var logger = new FakeLogger<KsefAccessService>();
+        var sut = new KsefAccessService(client, new FakeCredentialsStore(AnyCredentials), logger);
+
+        await Assert.ThrowsAsync<PollFailureException>(() =>
+            sut.FetchWindowedListAsync(AnySubjectId, AnyWindow, CancellationToken.None));
+
+        var entry = Assert.Single(logger.Entries);
+        Assert.Equal(LogLevel.Error, entry.Level);
+    }
+
+    [Fact]
     public async Task IsTruncated_LogsError()
     {
         var raw = new KsefInvoiceSummary("KSEF-1", "FV/1", 100m, 123m, "PLN", "1111111111", null);

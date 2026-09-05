@@ -19,12 +19,33 @@ using Microsoft.Extensions.Logging;
 // logs invalid reloads (I-16) through it for as long as the daemon runs, not just at startup.
 var bootstrapLoggerFactory = LoggerFactory.Create(b => b.AddSimpleConsole());
 
-// I-13: fail-fast at startup — FindConfigFile/ConfigWatcher.Start throw on a missing/invalid file.
-var configPath = FindConfigFile();
-var configWatcher = ConfigWatcher.Start(
-    new ConfigLoader(new EnvironmentVariables()),
-    File.ReadAllText(configPath),
-    bootstrapLoggerFactory.CreateLogger<ConfigWatcher>());
+// I-13: fail-fast at startup on a missing/invalid config file — reported as a clean one-line
+// (or short bulleted) message on stderr with exit code 1, not a raw .NET stack trace.
+string configPath;
+ConfigWatcher configWatcher;
+try
+{
+    configPath = FindConfigFile();
+    configWatcher = ConfigWatcher.Start(
+        new ConfigLoader(new EnvironmentVariables()),
+        File.ReadAllText(configPath),
+        bootstrapLoggerFactory.CreateLogger<ConfigWatcher>());
+}
+catch (FileNotFoundException ex)
+{
+    Console.Error.WriteLine($"ksef-watcher: {ex.Message}");
+    return 1;
+}
+catch (InvalidConfigException ex)
+{
+    Console.Error.WriteLine("ksef-watcher: config.yaml is invalid:");
+    foreach (var error in ex.Errors)
+    {
+        Console.Error.WriteLine($"  - {error}");
+    }
+
+    return 1;
+}
 
 var stateDbPath = Path.Combine(Path.GetDirectoryName(configPath)!, "state.db");
 var repository = new SqliteSubjectWatchRepository($"Data Source={stateDbPath}");
@@ -53,8 +74,11 @@ builder.Services.AddSingleton<IKsefQueryClient>(sp =>
 });
 builder.Services.AddSingleton<IInvoiceListProvider, KsefAccessService>();
 
-builder.Services.AddHttpClient<DiscordNotifier>();
-builder.Services.AddSingleton<IChannelSender>(sp => sp.GetRequiredService<DiscordNotifier>());
+// Named client, not a typed client pinned into a singleton (nameof(DiscordNotifier) matches the
+// name DiscordNotifier itself requests via IHttpClientFactory.CreateClient) — lets the factory
+// actually rotate the underlying handler for this long-lived daemon (stale DNS, dead connections).
+builder.Services.AddHttpClient(nameof(DiscordNotifier));
+builder.Services.AddSingleton<IChannelSender, DiscordNotifier>();
 builder.Services.AddSingleton<INotifier, DeliveryService>();
 
 builder.Services.AddSingleton<IDelay, RealDelay>();
@@ -71,6 +95,7 @@ builder.Services.AddHostedService(sp =>
 
 var app = builder.Build();
 await app.RunAsync();
+return 0;
 
 static string FindConfigFile()
 {

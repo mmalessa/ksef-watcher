@@ -106,6 +106,11 @@ public sealed class SubjectWatch
         }
 
         var newHwm = PendingWindow.Hwm;
+        if (LastHwm is not null && newHwm.Utc < LastHwm.Utc)
+        {
+            throw new InvalidOperationException($"Cannot advance the HWM backward: new HWM {newHwm.Utc:O} is before current {LastHwm.Utc:O}.");
+        }
+
         LastHwm = newHwm;
         PendingWindow = null;
         _domainEvents.Add(new CursorAdvanced(SubjectId, newHwm));

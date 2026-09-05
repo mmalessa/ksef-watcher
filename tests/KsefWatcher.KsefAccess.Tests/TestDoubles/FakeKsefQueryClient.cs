@@ -6,11 +6,14 @@ namespace KsefWatcher.KsefAccess.Tests.TestDoubles;
 /// Records calls; returns <paramref name="pages"/> in order, one per <c>QueryReceivedInvoicesAsync</c>
 /// call, unless <paramref name="queryException"/> is set — then it throws on the call at
 /// <paramref name="throwOnPageIndex"/> (0-based) instead of returning that page.
+/// <paramref name="openSessionException"/>, if set, is thrown from <c>OpenSessionAsync</c> instead
+/// of returning a session.
 /// </summary>
 public sealed class FakeKsefQueryClient(
     IReadOnlyList<KsefQueryPage> pages,
     Exception? queryException = null,
-    int throwOnPageIndex = 0) : IKsefQueryClient
+    int throwOnPageIndex = 0,
+    Exception? openSessionException = null) : IKsefQueryClient
 {
     public List<SubjectCredentials> OpenSessionCalls { get; } = [];
     public List<(DateTimeOffset From, DateTimeOffset To, int PageOffset)> QueryCalls { get; } = [];
@@ -21,6 +24,12 @@ public sealed class FakeKsefQueryClient(
     public Task<KsefSession> OpenSessionAsync(SubjectCredentials credentials, CancellationToken cancellationToken)
     {
         OpenSessionCalls.Add(credentials);
+
+        if (openSessionException is not null)
+        {
+            throw openSessionException;
+        }
+
         return Task.FromResult(new KsefSession("fake-token"));
     }
 

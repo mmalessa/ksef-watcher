@@ -19,6 +19,7 @@ public sealed class PollingBackgroundService(
     ILogger<PollingBackgroundService> logger) : BackgroundService
 {
     private readonly ConcurrentDictionary<string, Timer> _timers = new();
+    private readonly InFlightGate _inFlightGate = new();
     private CancellationToken _stoppingToken;
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -58,7 +59,18 @@ public sealed class PollingBackgroundService(
         StartSubject(subject);
     }
 
-    private void Fire(string nip) => _ = RunPollSafelyAsync(nip);
+    private void Fire(string nip)
+    {
+        if (!_inFlightGate.TryEnter(nip))
+        {
+            // I-1: a poll that outruns its interval must not overlap with the next one for the
+            // same subject — the next scheduled tick picks it up once this cycle finishes.
+            logger.LogWarning("Skipping poll for subject {Nip}: previous cycle is still running.", nip);
+            return;
+        }
+
+        _ = RunPollSafelyAsync(nip);
+    }
 
     private async Task RunPollSafelyAsync(string nip)
     {
@@ -85,6 +97,10 @@ public sealed class PollingBackgroundService(
         {
             // I-3: one subject's failure must never affect another's cycle or crash the host.
             logger.LogError(ex, "Poll cycle failed for subject {Nip}.", nip);
+        }
+        finally
+        {
+            _inFlightGate.Exit(nip);
         }
     }
 

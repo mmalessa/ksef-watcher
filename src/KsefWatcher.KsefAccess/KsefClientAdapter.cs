@@ -1,3 +1,4 @@
+using System.Net;
 using KSeF.Client.Core.Exceptions;
 using KSeF.Client.Core.Interfaces;
 using KSeF.Client.Core.Interfaces.Clients;
@@ -49,6 +50,10 @@ public sealed class KsefClientAdapter(
         {
             throw new KsefRateLimitedException(ex.RecommendedDelay);
         }
+        catch (KsefApiException ex) when (ex.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+        {
+            throw new KsefAuthFailedException(ex.Message);
+        }
     }
 
     public async Task<KsefQueryPage> QueryReceivedInvoicesAsync(KsefSession session, DateTimeOffset from, DateTimeOffset to, int pageOffset, CancellationToken cancellationToken)
@@ -76,6 +81,10 @@ public sealed class KsefClientAdapter(
         catch (KsefRateLimitException ex)
         {
             throw new KsefRateLimitedException(ex.RecommendedDelay);
+        }
+        catch (KsefApiException ex) when (ex.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+        {
+            throw new KsefAuthFailedException(ex.Message);
         }
 
         var items = (response.Invoices ?? []).Select(Translate).ToList();

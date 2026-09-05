@@ -106,6 +106,23 @@ public class ConfigWatcherTests
     }
 
     [Fact]
+    public void Reload_WithMalformedYaml_KeepsLastValidCurrent_DoesNotThrow()
+    {
+        const string malformedYaml = """
+            version: 1
+            defaultEnvironment: test
+            subjects: [
+            """;
+        var watcher = ConfigWatcher.Start(NewLoader(), ValidYaml);
+        var originalCurrent = watcher.Current;
+
+        var exception = Record.Exception(() => watcher.Reload(malformedYaml));
+
+        Assert.Null(exception);
+        Assert.Same(originalCurrent, watcher.Current);
+    }
+
+    [Fact]
     public void Reload_RecoversWithAValidFile_AfterAPreviousRejection()
     {
         var watcher = ConfigWatcher.Start(NewLoader(), ValidYaml);

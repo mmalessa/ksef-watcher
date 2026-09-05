@@ -1,3 +1,4 @@
+using System.Net;
 using KSeF.Client.Core.Exceptions;
 using KSeF.Client.Core.Interfaces;
 using KSeF.Client.Core.Interfaces.Clients;
@@ -186,6 +187,33 @@ public class KsefClientAdapterTests
         await sut.OpenSessionAsync(credentials, CancellationToken.None);
 
         Assert.Equal(Environment.Test, Assert.Single(requestedEnvironments));
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.Unauthorized)]
+    [InlineData(HttpStatusCode.Forbidden)]
+    public async Task OpenSessionAsync_AuthRejected_ThrowsKsefAuthFailedException(HttpStatusCode statusCode)
+    {
+        var authCoordinator = new FakeAuthCoordinator((_, _, _, _) =>
+            throw new KsefApiException("Token rejected", statusCode));
+        var sut = NewSut(authCoordinator, new FakeCryptographyService(), new FakeInvoiceDownloadClient((_, _, _, _) => throw new NotSupportedException()));
+
+        await Assert.ThrowsAsync<KsefAuthFailedException>(() =>
+            sut.OpenSessionAsync(AnyCredentials, CancellationToken.None));
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.Unauthorized)]
+    [InlineData(HttpStatusCode.Forbidden)]
+    public async Task QueryReceivedInvoicesAsync_AuthRejected_ThrowsKsefAuthFailedException(HttpStatusCode statusCode)
+    {
+        var invoiceDownloadClient = new FakeInvoiceDownloadClient((_, _, _, _) =>
+            throw new KsefApiException("Token rejected", statusCode));
+        var sut = NewSut(AlwaysAuthenticated, new FakeCryptographyService(), invoiceDownloadClient);
+        var session = await sut.OpenSessionAsync(AnyCredentials, CancellationToken.None);
+
+        await Assert.ThrowsAsync<KsefAuthFailedException>(() =>
+            sut.QueryReceivedInvoicesAsync(session, DateTimeOffset.UtcNow.AddHours(-1), DateTimeOffset.UtcNow, 0, CancellationToken.None));
     }
 
     [Fact]

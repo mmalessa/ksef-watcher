@@ -42,6 +42,21 @@ public class ConfigLoaderTests
     }
 
     [Fact]
+    public void MalformedYaml_ReturnsFailure_InsteadOfThrowing()
+    {
+        const string malformedYaml = """
+            version: 1
+            defaultEnvironment: test
+            subjects: [
+            """;
+
+        var result = NewLoader().Load(malformedYaml);
+
+        var failure = Assert.IsType<ConfigLoadResult.Failure>(result);
+        Assert.Contains(failure.Errors, e => e.Contains("could not be parsed"));
+    }
+
+    [Fact]
     public void SubjectWithoutExplicitEnvironment_InheritsDefaultEnvironment()
     {
         const string yaml = """
@@ -284,6 +299,71 @@ public class ConfigLoaderTests
 
         var failure = Assert.IsType<ConfigLoadResult.Failure>(result);
         Assert.Contains(failure.Errors, e => e.Contains("subjects[0].channels") && e.Contains("exactly one"));
+    }
+
+    [Fact]
+    public void UnknownEnvironment_FailsValidation()
+    {
+        const string yaml = """
+            version: 1
+            defaultEnvironment: test
+            subjects:
+              - nip: "5260001246"
+                intervalMinutes: 60
+                ksefToken: "literal-token"
+                environment: prpd
+                channels:
+                  - type: discord
+                    webhookUrl: "https://example.invalid/webhook"
+            """;
+
+        var result = NewLoader().Load(yaml);
+
+        var failure = Assert.IsType<ConfigLoadResult.Failure>(result);
+        Assert.Contains(failure.Errors, e => e.Contains("subjects[0].environment"));
+    }
+
+    [Fact]
+    public void EnvironmentWithDifferentCasing_IsAccepted()
+    {
+        const string yaml = """
+            version: 1
+            defaultEnvironment: test
+            subjects:
+              - nip: "5260001246"
+                intervalMinutes: 60
+                ksefToken: "literal-token"
+                environment: PROD
+                channels:
+                  - type: discord
+                    webhookUrl: "https://example.invalid/webhook"
+            """;
+
+        var result = NewLoader().Load(yaml);
+
+        var success = Assert.IsType<ConfigLoadResult.Success>(result);
+        Assert.Equal("PROD", success.Config.Subjects[0].Environment);
+    }
+
+    [Fact]
+    public void UnknownDefaultEnvironment_FailsValidation()
+    {
+        const string yaml = """
+            version: 1
+            defaultEnvironment: prpd
+            subjects:
+              - nip: "5260001246"
+                intervalMinutes: 60
+                ksefToken: "literal-token"
+                channels:
+                  - type: discord
+                    webhookUrl: "https://example.invalid/webhook"
+            """;
+
+        var result = NewLoader().Load(yaml);
+
+        var failure = Assert.IsType<ConfigLoadResult.Failure>(result);
+        Assert.Contains(failure.Errors, e => e.Contains("subjects[0].environment"));
     }
 
     [Fact]

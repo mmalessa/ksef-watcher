@@ -30,6 +30,29 @@ public class AdvanceHwmTests
     }
 
     [Fact]
+    public void Throws_WhenPendingWindowHwmIsBeforeCurrentLastHwm()
+    {
+        var currentHwm = new Hwm(DateTimeOffset.UtcNow);
+        var earlierHwm = new Hwm(DateTimeOffset.UtcNow.AddMinutes(-30));
+        var sut = new SubjectWatch(AnySubjectId, new HashSet<InvoiceReference>(), currentHwm);
+        sut.Detect(AnyWindow, new FetchedWindow(new HashSet<InvoiceReference>(), [], earlierHwm));
+
+        Assert.Throws<InvalidOperationException>(() => sut.AdvanceHwm());
+    }
+
+    [Fact]
+    public void DoesNotThrow_WhenPendingWindowHwmEqualsCurrentLastHwm()
+    {
+        var sameHwm = new Hwm(DateTimeOffset.UtcNow);
+        var sut = new SubjectWatch(AnySubjectId, new HashSet<InvoiceReference>(), sameHwm);
+        sut.Detect(AnyWindow, new FetchedWindow(new HashSet<InvoiceReference>(), [], sameHwm));
+
+        var exception = Record.Exception(() => sut.AdvanceHwm());
+
+        Assert.Null(exception);
+    }
+
+    [Fact]
     public void AdvancesLastHwm_ClearsPendingWindow_AndRaisesCursorAdvanced_WhenEveryRefIsNotified()
     {
         var refA = new InvoiceReference("A-1");

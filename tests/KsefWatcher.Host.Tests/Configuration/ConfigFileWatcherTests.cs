@@ -61,6 +61,24 @@ public class ConfigFileWatcherTests
     }
 
     [Fact]
+    public void HandleFileChanged_WithMalformedYaml_DoesNotThrow_KeepsLastValidConfig()
+    {
+        const string malformedYaml = """
+            version: 1
+            defaultEnvironment: test
+            subjects: [
+            """;
+        var configWatcher = NewConfigWatcher(ValidYamlA);
+        var fileReader = new FakeConfigFileReader(() => malformedYaml);
+        var sut = new ConfigFileWatcher(configWatcher, fileReader, "config.yaml");
+
+        var exception = Record.Exception(() => sut.HandleFileChanged());
+
+        Assert.Null(exception);
+        Assert.Equal("5260001246", configWatcher.Current.Subjects[0].Nip);
+    }
+
+    [Fact]
     public void HandleFileChanged_WhenReadThrowsIOException_LogsWarning()
     {
         var configWatcher = NewConfigWatcher(ValidYamlA);

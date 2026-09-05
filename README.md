@@ -31,7 +31,33 @@ subjects:
         webhookUrl: "https://discord.com/api/webhooks/..."
 ```
 
-The config file is searched in the binary's directory (`./config.yaml`) and then in `/etc/ksef-watcher/config.yaml`.
+The config file is searched in the binary's directory (`./config.yaml`) and then in `/etc/ksef-watcher/config.yaml`. A fully-commented starting point is at [`config.yaml.dist`](config.yaml.dist) — copy it to `config.yaml` and fill in your subjects.
+
+## Building
+
+Requires only Docker — builds and tests run inside the pinned .NET 8 SDK image via the `Makefile`,
+no local .NET SDK needed:
+
+```sh
+make init    # one-time: fetches the vendored KSeF client at its pinned commit and patches it
+make build
+make test
+```
+
+`make init` is required before the first build — the official KSeF client (`ksef-client-csharp`)
+is vendored rather than pulled from NuGet (see `vendor/README.md` for why) and isn't committed to
+this repo.
+
+### Producing a deployable binary
+
+```sh
+make publish
+```
+
+Produces a single self-contained executable at `./bin/ksef-watcher` — no .NET runtime needed on
+the target machine, nothing else to copy alongside it. Defaults to `linux-x64`; cross-compile for
+another target with `make publish PUBLISH_RID=linux-arm64`. Drop it wherever `config.yaml` will
+live (see above) and run it directly.
 
 ## Status
 

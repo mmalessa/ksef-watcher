@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using YamlDotNet.Core;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -21,11 +22,21 @@ public sealed class ConfigLoader(IEnvironmentVariables environmentVariables)
     private static readonly int[] NipChecksumWeights = [6, 5, 7, 2, 3, 4, 5, 6, 7];
     private static readonly HashSet<string> SupportedChannelTypes = ["discord"]; // V1
     private static readonly HashSet<string> SupportedAmountDisplays = ["brutto", "netto"]; // OQ-16
+    private static readonly HashSet<string> SupportedEnvironments = new(["test", "demo", "prod"], StringComparer.OrdinalIgnoreCase); // OQ-9
     private static readonly Regex EnvVarReference = new(@"^\$\{(?<name>[^}]+)\}$"); // OQ-13
 
     public ConfigLoadResult Load(string yaml)
     {
-        var config = Deserializer.Deserialize<ConfigFile>(yaml);
+        ConfigFile config;
+        try
+        {
+            config = Deserializer.Deserialize<ConfigFile>(yaml);
+        }
+        catch (YamlException ex)
+        {
+            return new ConfigLoadResult.Failure([$"yaml: could not be parsed ({ex.Message})"]);
+        }
+
         var errors = new List<string>();
 
         if (config.Version != SupportedSchemaVersion)
@@ -90,6 +101,11 @@ public sealed class ConfigLoader(IEnvironmentVariables environmentVariables)
         if (!SupportedAmountDisplays.Contains(subject.AmountDisplay))
         {
             errors.Add($"subjects[{index}].amountDisplay: must be 'brutto' or 'netto' (OQ-16), was '{subject.AmountDisplay}'.");
+        }
+
+        if (!SupportedEnvironments.Contains(subject.Environment ?? string.Empty))
+        {
+            errors.Add($"subjects[{index}].environment: must be 'test', 'demo' or 'prod' (OQ-9), was '{subject.Environment}'.");
         }
 
         if (subject.Channels.Count != 1)

@@ -13,16 +13,28 @@ public class DiscordNotifierTests
     [Fact]
     public void ChannelType_IsDiscord()
     {
-        var sut = new DiscordNotifier(new HttpClient(new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.NoContent))));
+        var sut = new DiscordNotifier(new FakeHttpClientFactory(() => new HttpClient(new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.NoContent)))));
 
         Assert.Equal("discord", sut.ChannelType);
+    }
+
+    [Fact]
+    public async Task SendAsync_ResolvesAFreshClientPerCall_ViaHttpClientFactory()
+    {
+        var factory = new FakeHttpClientFactory(() => new HttpClient(new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.NoContent))));
+        var sut = new DiscordNotifier(factory);
+
+        await sut.SendAsync(AnyChannel, "first", CancellationToken.None);
+        await sut.SendAsync(AnyChannel, "second", CancellationToken.None);
+
+        Assert.Equal(2, factory.RequestedNames.Count); // not cached across calls — lets IHttpClientFactory rotate handlers
     }
 
     [Fact]
     public async Task Success_PostsToChannelTarget_WithMessageAsJsonContent_ReturnsAcknowledged()
     {
         var handler = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.NoContent));
-        var sut = new DiscordNotifier(new HttpClient(handler));
+        var sut = new DiscordNotifier(new FakeHttpClientFactory(() => new HttpClient(handler)));
 
         var outcome = await sut.SendAsync(AnyChannel, "New invoice received", CancellationToken.None);
 
@@ -38,7 +50,7 @@ public class DiscordNotifierTests
     public async Task NonSuccessStatusCode_ReturnsHttpFailure_WithTheStatusCode(HttpStatusCode statusCode)
     {
         var handler = new FakeHttpMessageHandler(_ => new HttpResponseMessage(statusCode));
-        var sut = new DiscordNotifier(new HttpClient(handler));
+        var sut = new DiscordNotifier(new FakeHttpClientFactory(() => new HttpClient(handler)));
 
         var outcome = await sut.SendAsync(AnyChannel, "message", CancellationToken.None);
 
@@ -50,7 +62,7 @@ public class DiscordNotifierTests
     public async Task ConnectionRefused_ReturnsTransportFailure()
     {
         var handler = new FakeHttpMessageHandler(_ => throw new HttpRequestException("Connection refused"));
-        var sut = new DiscordNotifier(new HttpClient(handler));
+        var sut = new DiscordNotifier(new FakeHttpClientFactory(() => new HttpClient(handler)));
 
         var outcome = await sut.SendAsync(AnyChannel, "message", CancellationToken.None);
 
@@ -61,7 +73,7 @@ public class DiscordNotifierTests
     public async Task Timeout_ReturnsTransportFailure()
     {
         var handler = new FakeHttpMessageHandler(_ => throw new TaskCanceledException("Timed out", new TimeoutException()));
-        var sut = new DiscordNotifier(new HttpClient(handler));
+        var sut = new DiscordNotifier(new FakeHttpClientFactory(() => new HttpClient(handler)));
 
         var outcome = await sut.SendAsync(AnyChannel, "message", CancellationToken.None);
 

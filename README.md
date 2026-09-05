@@ -79,6 +79,17 @@ a `config.yaml` at `/etc/ksef-watcher/config.yaml` (see above).
 
 Stack (decided): **C# / .NET**, built on the [official KSeF client](https://github.com/CIRFMF/ksef-client-csharp).
 
+## Ubuntu notes
+- create user `ksef-watcher`
+- copy `bin/ksef-watcher` to `/opt/ksef-watcher/bin/ksef-watcher` (and set owner to ksef-watcher)
+- copy (and modify) `config.yaml.dist` to `/etc/ksef-watcher/config.yaml`  (and set owner to ksef-watcher)
+- create directory `/var/lib/ksef-watcher`  (and set owner to ksef-watcher)
+- copy `ubuntu/ksef-watcher.service` to `/etc/systemd/system/ksef-watcher.service`
+- run `sudo systemctl daemon-reload`
+- run `sudo systemctl enable ksef-watcher.service`
+- run `sudo systemctl start ksef-watcher.service`
+- check `sudo systemctl status ksef-watcher.service` and logs: `journalctl -u ksef-watcher.service -b -f`
+
 ## Documentation
 
 - [DDD modelling roadmap & decisions log](docs/README.md)

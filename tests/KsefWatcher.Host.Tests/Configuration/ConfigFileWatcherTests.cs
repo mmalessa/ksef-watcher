@@ -10,26 +10,30 @@ public class ConfigFileWatcherTests
 {
     private const string ValidYamlA = """
         version: 1
-        defaultEnvironment: test
+        environment: test
+        intervalMinutes: 60
         subjects:
           - nip: "5260001246"
-            intervalMinutes: 60
+            intervalOffset: 0
             ksefToken: "token-a"
             channels:
               - type: discord
-                webhookUrl: "https://example.invalid/a"
+                token: "bot-token-a"
+                channelId: "111111111111111111"
         """;
 
     private const string ValidYamlB = """
         version: 1
-        defaultEnvironment: test
+        environment: test
+        intervalMinutes: 60
         subjects:
           - nip: "9999999999"
-            intervalMinutes: 60
+            intervalOffset: 0
             ksefToken: "token-b"
             channels:
               - type: discord
-                webhookUrl: "https://example.invalid/b"
+                token: "bot-token-b"
+                channelId: "222222222222222222"
         """;
 
     private static ConfigWatcher NewConfigWatcher(string initialYaml) =>
@@ -65,7 +69,8 @@ public class ConfigFileWatcherTests
     {
         const string malformedYaml = """
             version: 1
-            defaultEnvironment: test
+            environment: test
+            intervalMinutes: 60
             subjects: [
             """;
         var configWatcher = NewConfigWatcher(ValidYamlA);

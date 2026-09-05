@@ -37,6 +37,26 @@ public class PollCycle_FailureTests
     }
 
     [Fact]
+    public async Task PermanentFailure_ReturnsOutcomeWithNullHwm_AndZeroNotified()
+    {
+        var invoice = AnyInvoice("A-1");
+        var sw = new SubjectWatch(AnySubjectId, new HashSet<InvoiceReference>(), PreviousHwm);
+        var repository = new FakeSubjectWatchRepository(sw);
+        var provider = new FakeInvoiceListProvider(new FetchedWindow(new HashSet<InvoiceReference> { invoice.Ref }, [invoice], FetchedHwm));
+        var notifier = new FakeNotifier((_, _) => new DeliveryResult.Failed(DeliveryResult.FailureKind.Permanent));
+        var delay = new FakeDelay();
+        var sut = new PollCycle(repository, provider, notifier, delay);
+
+        var outcome = await sut.RunAsync(AnySubjectId, AnyChannel, AmountDisplay.Brutto, AnyInterval, CancellationToken.None);
+
+        Assert.False(outcome.IsBaseline);
+        Assert.Equal(1, outcome.FetchedCount);
+        Assert.Equal(1, outcome.DetectedCount);
+        Assert.Equal(0, outcome.NotifiedCount);
+        Assert.Null(outcome.Hwm);
+    }
+
+    [Fact]
     public async Task RetryableFailure_ExhaustsThreeAttemptsWithBackoff_ThenStopsWithoutAdvancingHwm()
     {
         var invoice = AnyInvoice("A-1");

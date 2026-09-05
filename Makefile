@@ -48,8 +48,10 @@ test: restore
 # Single self-contained binary at ./bin/ksef-watcher (no .NET runtime needed on the target
 # machine — matches A6's "runs unattended as a systemd service" with a one-file deploy artifact).
 # PUBLISH_RID picks the target machine's architecture (e.g. `make publish PUBLISH_RID=linux-arm64`).
+# Publishes straight into ./bin without wiping it first — DebugType=embedded and
+# GenerateDocumentationFile=false below mean dotnet publish only ever writes the one binary file,
+# so anything else you keep there (e.g. your own config.yaml) survives repeated publishes.
 publish:
-	$(DOCKER_RUN) rm -rf bin
 	$(DOCKER_RUN) dotnet publish src/KsefWatcher.Host/KsefWatcher.Host.csproj \
 		--configuration $(CONFIGURATION) \
 		--runtime $(PUBLISH_RID) \

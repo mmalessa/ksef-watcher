@@ -40,6 +40,27 @@ public class PollCycle_SendingTests
     }
 
     [Fact]
+    public async Task OneUnseenInvoice_Confirmed_ReturnsOutcomeWithCountsAndNewHwm()
+    {
+        var invoice = AnyInvoice("A-1");
+        var newHwm = new Hwm(DateTimeOffset.Parse("2026-01-01T01:00:00Z"));
+        var sw = new SubjectWatch(AnySubjectId, new HashSet<InvoiceReference>(), new Hwm(DateTimeOffset.Parse("2026-01-01T00:00:00Z")));
+        var repository = new FakeSubjectWatchRepository(sw);
+        var provider = new FakeInvoiceListProvider(new FetchedWindow(new HashSet<InvoiceReference> { invoice.Ref }, [invoice], newHwm));
+        var notifier = new FakeNotifier((_, _) => new DeliveryResult.Confirmed());
+        var delay = new FakeDelay();
+        var sut = new PollCycle(repository, provider, notifier, delay);
+
+        var outcome = await sut.RunAsync(AnySubjectId, AnyChannel, AmountDisplay.Netto, AnyInterval, CancellationToken.None);
+
+        Assert.False(outcome.IsBaseline);
+        Assert.Equal(1, outcome.FetchedCount);
+        Assert.Equal(1, outcome.DetectedCount);
+        Assert.Equal(1, outcome.NotifiedCount);
+        Assert.Equal(newHwm, outcome.Hwm);
+    }
+
+    [Fact]
     public async Task MultipleUnseenInvoices_SendsSequentiallyWithThreeSecondDelayBetween_NotAfterLast()
     {
         var invoiceA = AnyInvoice("A-1");

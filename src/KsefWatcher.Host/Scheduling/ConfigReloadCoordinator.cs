@@ -8,7 +8,7 @@ namespace KsefWatcher.Host.Scheduling;
 
 /// <summary>
 /// Reacts to <see cref="ConfigWatcher.Reloaded"/> (docs/05_connect_message_flows.md, Scenario D):
-/// diffs the subject list (<see cref="ConfigReloadPlanner"/>) and drives
+/// diffs the whole config (<see cref="ConfigReloadPlanner"/>) and drives
 /// <see cref="PollingBackgroundService"/> and <see cref="HeartbeatScheduler"/> plus the deliberate
 /// state reset on removal (I-19). Heartbeat timing doesn't depend on the poll interval
 /// (<see cref="HeartbeatSchedule"/>), so it only needs add/remove, never reschedule.
@@ -20,11 +20,11 @@ public sealed class ConfigReloadCoordinator(
     SqliteSubjectWatchRepository repository,
     ILogger<ConfigReloadCoordinator> logger) : IHostedService
 {
-    private IReadOnlyList<SubjectConfig> _previousSubjects = [];
+    private ConfigFile _previousConfig = new();
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _previousSubjects = configWatcher.Current.Subjects;
+        _previousConfig = configWatcher.Current;
         configWatcher.Reloaded += OnReloaded;
         return Task.CompletedTask;
     }
@@ -37,8 +37,12 @@ public sealed class ConfigReloadCoordinator(
 
     private void OnReloaded(ConfigFile newConfig)
     {
-        var plan = ConfigReloadPlanner.Plan(_previousSubjects, newConfig.Subjects);
-        _previousSubjects = newConfig.Subjects;
+        var plan = ConfigReloadPlanner.Plan(_previousConfig, newConfig);
+        _previousConfig = newConfig;
+
+        logger.LogInformation(
+            "Config reloaded: {Total} subject(s) configured ({Added} added, {Removed} removed, {Rescheduled} rescheduled).",
+            newConfig.Subjects.Count, plan.Added.Count, plan.Removed.Count, plan.Rescheduled.Count);
 
         foreach (var subject in plan.Added)
         {
@@ -48,14 +52,15 @@ public sealed class ConfigReloadCoordinator(
 
         foreach (var subject in plan.Removed)
         {
+            logger.LogInformation("Subject {Nip}: removed from config, no longer watched.", subject.Nip);
             pollingService.StopSubject(subject.Nip);
             heartbeatScheduler.StopSubject(subject.Nip);
             _ = DeleteRemovedSubjectStateSafelyAsync(subject.Nip);
         }
 
-        foreach (var subject in plan.IntervalChanged)
+        foreach (var subject in plan.Rescheduled)
         {
-            pollingService.RescheduleSubject(subject); // recomputes offset, A9
+            pollingService.RescheduleSubject(subject); // logs new next-sync time
         }
     }
 

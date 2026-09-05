@@ -10,16 +10,17 @@ public class ConfigLoaderTests
 
     private const string ValidYaml = """
         version: 1
-        defaultEnvironment: test
+        environment: test
+        intervalMinutes: 60
         subjects:
           - nip: "5260001246"
-            intervalMinutes: 60
+            intervalOffset: 0
             ksefToken: "literal-token"
-            environment: test
             amountDisplay: brutto
             channels:
               - type: discord
-                webhookUrl: "https://example.invalid/webhook"
+                token: "bot-token"
+                channelId: "111111111111111111"
         """;
 
     [Fact]
@@ -29,16 +30,50 @@ public class ConfigLoaderTests
 
         var success = Assert.IsType<ConfigLoadResult.Success>(result);
         Assert.Equal(1, success.Config.Version);
-        Assert.Equal("test", success.Config.DefaultEnvironment);
+        Assert.Equal("test", success.Config.Environment);
+        Assert.Equal(60, success.Config.IntervalMinutes);
         var subject = Assert.Single(success.Config.Subjects);
         Assert.Equal("5260001246", subject.Nip);
-        Assert.Equal(60, subject.IntervalMinutes);
+        Assert.Equal(0, subject.IntervalOffset);
         Assert.Equal("literal-token", subject.KsefToken);
-        Assert.Equal("test", subject.Environment);
         Assert.Equal("brutto", subject.AmountDisplay);
         var channel = Assert.Single(subject.Channels);
         Assert.Equal("discord", channel.Type);
-        Assert.Equal("https://example.invalid/webhook", channel.WebhookUrl);
+        Assert.Equal("bot-token", channel.Token);
+        Assert.Equal("111111111111111111", channel.ChannelId);
+    }
+
+    [Fact]
+    public void DatabasePath_WhenNotSpecified_DefaultsToNull()
+    {
+        var result = NewLoader().Load(ValidYaml);
+
+        var success = Assert.IsType<ConfigLoadResult.Success>(result);
+        Assert.Null(success.Config.DatabasePath);
+    }
+
+    [Fact]
+    public void DatabasePath_WhenSpecified_IsParsed()
+    {
+        const string yaml = """
+            version: 1
+            environment: test
+            intervalMinutes: 60
+            databasePath: /var/lib/ksef-watcher/state.db
+            subjects:
+              - nip: "5260001246"
+                intervalOffset: 0
+                ksefToken: "literal-token"
+                channels:
+                  - type: discord
+                    token: "bot-token"
+                    channelId: "111111111111111111"
+            """;
+
+        var result = NewLoader().Load(yaml);
+
+        var success = Assert.IsType<ConfigLoadResult.Success>(result);
+        Assert.Equal("/var/lib/ksef-watcher/state.db", success.Config.DatabasePath);
     }
 
     [Fact]
@@ -46,7 +81,8 @@ public class ConfigLoaderTests
     {
         const string malformedYaml = """
             version: 1
-            defaultEnvironment: test
+            environment: test
+            intervalMinutes: 60
             subjects: [
             """;
 
@@ -57,32 +93,12 @@ public class ConfigLoaderTests
     }
 
     [Fact]
-    public void SubjectWithoutExplicitEnvironment_InheritsDefaultEnvironment()
-    {
-        const string yaml = """
-            version: 1
-            defaultEnvironment: prod
-            subjects:
-              - nip: "5260001246"
-                intervalMinutes: 60
-                ksefToken: "literal-token"
-                channels:
-                  - type: discord
-                    webhookUrl: "https://example.invalid/webhook"
-            """;
-
-        var result = NewLoader().Load(yaml);
-
-        var success = Assert.IsType<ConfigLoadResult.Success>(result);
-        Assert.Equal("prod", success.Config.Subjects[0].Environment);
-    }
-
-    [Fact]
     public void UnknownSchemaVersion_FailsValidation()
     {
         const string yaml = """
             version: 2
-            defaultEnvironment: test
+            environment: test
+            intervalMinutes: 60
             subjects: []
             """;
 
@@ -97,14 +113,16 @@ public class ConfigLoaderTests
     {
         const string yaml = """
             version: 1
-            defaultEnvironment: test
+            environment: test
+            intervalMinutes: 60
             subjects:
               - nip: ""
-                intervalMinutes: 60
+                intervalOffset: 0
                 ksefToken: "literal-token"
                 channels:
                   - type: discord
-                    webhookUrl: "https://example.invalid/webhook"
+                    token: "bot-token"
+                    channelId: "111111111111111111"
             """;
 
         var result = NewLoader().Load(yaml);
@@ -118,14 +136,16 @@ public class ConfigLoaderTests
     {
         const string yaml = """
             version: 1
-            defaultEnvironment: test
+            environment: test
+            intervalMinutes: 60
             subjects:
               - nip: "1234567890"
-                intervalMinutes: 60
+                intervalOffset: 0
                 ksefToken: "literal-token"
                 channels:
                   - type: discord
-                    webhookUrl: "https://example.invalid/webhook"
+                    token: "bot-token"
+                    channelId: "111111111111111111"
             """;
 
         var result = NewLoader().Load(yaml);
@@ -139,14 +159,16 @@ public class ConfigLoaderTests
     {
         const string yaml = """
             version: 1
-            defaultEnvironment: test
+            environment: test
+            intervalMinutes: 60
             subjects:
               - nip: "5260001246"
-                intervalMinutes: 60
+                intervalOffset: 0
                 ksefToken: ""
                 channels:
                   - type: discord
-                    webhookUrl: "https://example.invalid/webhook"
+                    token: "bot-token"
+                    channelId: "111111111111111111"
             """;
 
         var result = NewLoader().Load(yaml);
@@ -160,20 +182,22 @@ public class ConfigLoaderTests
     {
         const string yaml = """
             version: 1
-            defaultEnvironment: test
+            environment: test
+            intervalMinutes: 10
             subjects:
               - nip: "5260001246"
-                intervalMinutes: 10
+                intervalOffset: 0
                 ksefToken: "literal-token"
                 channels:
                   - type: discord
-                    webhookUrl: "https://example.invalid/webhook"
+                    token: "bot-token"
+                    channelId: "111111111111111111"
             """;
 
         var result = NewLoader().Load(yaml);
 
         var failure = Assert.IsType<ConfigLoadResult.Failure>(result);
-        Assert.Contains(failure.Errors, e => e.Contains("subjects[0].intervalMinutes"));
+        Assert.Contains(failure.Errors, e => e.Contains("intervalMinutes"));
     }
 
     [Fact]
@@ -181,20 +205,22 @@ public class ConfigLoaderTests
     {
         const string yaml = """
             version: 1
-            defaultEnvironment: test
+            environment: test
+            intervalMinutes: 10081
             subjects:
               - nip: "5260001246"
-                intervalMinutes: 10081
+                intervalOffset: 0
                 ksefToken: "literal-token"
                 channels:
                   - type: discord
-                    webhookUrl: "https://example.invalid/webhook"
+                    token: "bot-token"
+                    channelId: "111111111111111111"
             """;
 
         var result = NewLoader().Load(yaml);
 
         var failure = Assert.IsType<ConfigLoadResult.Failure>(result);
-        Assert.Contains(failure.Errors, e => e.Contains("subjects[0].intervalMinutes"));
+        Assert.Contains(failure.Errors, e => e.Contains("intervalMinutes"));
     }
 
     [Fact]
@@ -202,20 +228,91 @@ public class ConfigLoaderTests
     {
         const string yaml = """
             version: 1
-            defaultEnvironment: test
+            environment: test
+            intervalMinutes: 10080
             subjects:
               - nip: "5260001246"
-                intervalMinutes: 10080
+                intervalOffset: 0
                 ksefToken: "literal-token"
                 channels:
                   - type: discord
-                    webhookUrl: "https://example.invalid/webhook"
+                    token: "bot-token"
+                    channelId: "111111111111111111"
             """;
 
         var result = NewLoader().Load(yaml);
 
         var success = Assert.IsType<ConfigLoadResult.Success>(result);
-        Assert.Equal(10080, success.Config.Subjects[0].IntervalMinutes);
+        Assert.Equal(10080, success.Config.IntervalMinutes);
+    }
+
+    [Fact]
+    public void IntervalOffsetNegative_FailsValidation()
+    {
+        const string yaml = """
+            version: 1
+            environment: test
+            intervalMinutes: 60
+            subjects:
+              - nip: "5260001246"
+                intervalOffset: -1
+                ksefToken: "literal-token"
+                channels:
+                  - type: discord
+                    token: "bot-token"
+                    channelId: "111111111111111111"
+            """;
+
+        var result = NewLoader().Load(yaml);
+
+        var failure = Assert.IsType<ConfigLoadResult.Failure>(result);
+        Assert.Contains(failure.Errors, e => e.Contains("subjects[0].intervalOffset"));
+    }
+
+    [Fact]
+    public void IntervalOffsetEqualToIntervalMinutes_FailsValidation()
+    {
+        const string yaml = """
+            version: 1
+            environment: test
+            intervalMinutes: 60
+            subjects:
+              - nip: "5260001246"
+                intervalOffset: 60
+                ksefToken: "literal-token"
+                channels:
+                  - type: discord
+                    token: "bot-token"
+                    channelId: "111111111111111111"
+            """;
+
+        var result = NewLoader().Load(yaml);
+
+        var failure = Assert.IsType<ConfigLoadResult.Failure>(result);
+        Assert.Contains(failure.Errors, e => e.Contains("subjects[0].intervalOffset"));
+    }
+
+    [Fact]
+    public void IntervalOffsetOneBelowIntervalMinutes_IsAccepted()
+    {
+        const string yaml = """
+            version: 1
+            environment: test
+            intervalMinutes: 60
+            subjects:
+              - nip: "5260001246"
+                intervalOffset: 59
+                ksefToken: "literal-token"
+                channels:
+                  - type: discord
+                    token: "bot-token"
+                    channelId: "111111111111111111"
+            """;
+
+        var result = NewLoader().Load(yaml);
+
+        var success = Assert.IsType<ConfigLoadResult.Success>(result);
+        Assert.Equal(59, success.Config.Subjects[0].IntervalOffset);
     }
 
     [Fact]
@@ -223,14 +320,16 @@ public class ConfigLoaderTests
     {
         const string yaml = """
             version: 1
-            defaultEnvironment: test
+            environment: test
+            intervalMinutes: 60
             subjects:
               - nip: "5260001246"
-                intervalMinutes: 60
+                intervalOffset: 0
                 ksefToken: "literal-token"
                 channels:
                   - type: slack
-                    webhookUrl: "https://example.invalid/webhook"
+                    token: "bot-token"
+                    channelId: "111111111111111111"
             """;
 
         var result = NewLoader().Load(yaml);
@@ -240,23 +339,121 @@ public class ConfigLoaderTests
     }
 
     [Fact]
-    public void DiscordChannel_WithoutWebhookUrl_FailsValidation()
+    public void DiscordChannel_WithoutToken_FailsValidation()
     {
         const string yaml = """
             version: 1
-            defaultEnvironment: test
+            environment: test
+            intervalMinutes: 60
             subjects:
               - nip: "5260001246"
-                intervalMinutes: 60
+                intervalOffset: 0
                 ksefToken: "literal-token"
                 channels:
                   - type: discord
+                    channelId: "111111111111111111"
             """;
 
         var result = NewLoader().Load(yaml);
 
         var failure = Assert.IsType<ConfigLoadResult.Failure>(result);
-        Assert.Contains(failure.Errors, e => e.Contains("subjects[0].channels[0].webhookUrl"));
+        Assert.Contains(failure.Errors, e => e.Contains("subjects[0].channels[0].token"));
+    }
+
+    [Fact]
+    public void DiscordChannel_WithoutChannelId_FailsValidation()
+    {
+        const string yaml = """
+            version: 1
+            environment: test
+            intervalMinutes: 60
+            subjects:
+              - nip: "5260001246"
+                intervalOffset: 0
+                ksefToken: "literal-token"
+                channels:
+                  - type: discord
+                    token: "bot-token"
+            """;
+
+        var result = NewLoader().Load(yaml);
+
+        var failure = Assert.IsType<ConfigLoadResult.Failure>(result);
+        Assert.Contains(failure.Errors, e => e.Contains("subjects[0].channels[0].channelId"));
+    }
+
+    [Fact]
+    public void DiscordToken_EnvVarReference_ResolvesFromEnvironment()
+    {
+        const string yaml = """
+            version: 1
+            environment: test
+            intervalMinutes: 60
+            subjects:
+              - nip: "5260001246"
+                intervalOffset: 0
+                ksefToken: "literal-token"
+                channels:
+                  - type: discord
+                    token: "${DISCORD_TOKEN}"
+                    channelId: "${DISCORD_CHANNEL}"
+            """;
+        var env = new Dictionary<string, string>
+        {
+            ["DISCORD_TOKEN"] = "resolved-bot-token",
+            ["DISCORD_CHANNEL"] = "999999999999999999",
+        };
+
+        var result = NewLoader(env).Load(yaml);
+
+        var success = Assert.IsType<ConfigLoadResult.Success>(result);
+        var channel = success.Config.Subjects[0].Channels[0];
+        Assert.Equal("resolved-bot-token", channel.Token);
+        Assert.Equal("999999999999999999", channel.ChannelId);
+    }
+
+    [Fact]
+    public void DiscordToken_EnvVarReference_MissingVariable_FailsValidation_NamingTheVariable()
+    {
+        const string yaml = """
+            version: 1
+            environment: test
+            intervalMinutes: 60
+            subjects:
+              - nip: "5260001246"
+                intervalOffset: 0
+                ksefToken: "literal-token"
+                channels:
+                  - type: discord
+                    token: "${DISCORD_TOKEN}"
+                    channelId: "111111111111111111"
+            """;
+
+        var result = NewLoader().Load(yaml);
+
+        var failure = Assert.IsType<ConfigLoadResult.Failure>(result);
+        Assert.Contains(failure.Errors, e => e.Contains("subjects[0].channels[0].token") && e.Contains("DISCORD_TOKEN"));
+    }
+
+    [Fact]
+    public void LogsChannel_WithoutTokenOrChannelId_IsAccepted()
+    {
+        const string yaml = """
+            version: 1
+            environment: test
+            intervalMinutes: 60
+            subjects:
+              - nip: "5260001246"
+                intervalOffset: 0
+                ksefToken: "literal-token"
+                channels:
+                  - type: logs
+            """;
+
+        var result = NewLoader().Load(yaml);
+
+        var success = Assert.IsType<ConfigLoadResult.Success>(result);
+        Assert.Equal("logs", success.Config.Subjects[0].Channels[0].Type);
     }
 
     [Fact]
@@ -264,10 +461,11 @@ public class ConfigLoaderTests
     {
         const string yaml = """
             version: 1
-            defaultEnvironment: test
+            environment: test
+            intervalMinutes: 60
             subjects:
               - nip: "5260001246"
-                intervalMinutes: 60
+                intervalOffset: 0
                 ksefToken: "literal-token"
                 channels: []
             """;
@@ -283,16 +481,19 @@ public class ConfigLoaderTests
     {
         const string yaml = """
             version: 1
-            defaultEnvironment: test
+            environment: test
+            intervalMinutes: 60
             subjects:
               - nip: "5260001246"
-                intervalMinutes: 60
+                intervalOffset: 0
                 ksefToken: "literal-token"
                 channels:
                   - type: discord
-                    webhookUrl: "https://example.invalid/a"
+                    token: "bot-token-a"
+                    channelId: "111111111111111111"
                   - type: discord
-                    webhookUrl: "https://example.invalid/b"
+                    token: "bot-token-b"
+                    channelId: "222222222222222222"
             """;
 
         var result = NewLoader().Load(yaml);
@@ -306,21 +507,22 @@ public class ConfigLoaderTests
     {
         const string yaml = """
             version: 1
-            defaultEnvironment: test
+            environment: prpd
+            intervalMinutes: 60
             subjects:
               - nip: "5260001246"
-                intervalMinutes: 60
+                intervalOffset: 0
                 ksefToken: "literal-token"
-                environment: prpd
                 channels:
                   - type: discord
-                    webhookUrl: "https://example.invalid/webhook"
+                    token: "bot-token"
+                    channelId: "111111111111111111"
             """;
 
         var result = NewLoader().Load(yaml);
 
         var failure = Assert.IsType<ConfigLoadResult.Failure>(result);
-        Assert.Contains(failure.Errors, e => e.Contains("subjects[0].environment"));
+        Assert.Contains(failure.Errors, e => e.Contains("environment"));
     }
 
     [Fact]
@@ -328,42 +530,22 @@ public class ConfigLoaderTests
     {
         const string yaml = """
             version: 1
-            defaultEnvironment: test
+            environment: PROD
+            intervalMinutes: 60
             subjects:
               - nip: "5260001246"
-                intervalMinutes: 60
+                intervalOffset: 0
                 ksefToken: "literal-token"
-                environment: PROD
                 channels:
                   - type: discord
-                    webhookUrl: "https://example.invalid/webhook"
+                    token: "bot-token"
+                    channelId: "111111111111111111"
             """;
 
         var result = NewLoader().Load(yaml);
 
         var success = Assert.IsType<ConfigLoadResult.Success>(result);
-        Assert.Equal("PROD", success.Config.Subjects[0].Environment);
-    }
-
-    [Fact]
-    public void UnknownDefaultEnvironment_FailsValidation()
-    {
-        const string yaml = """
-            version: 1
-            defaultEnvironment: prpd
-            subjects:
-              - nip: "5260001246"
-                intervalMinutes: 60
-                ksefToken: "literal-token"
-                channels:
-                  - type: discord
-                    webhookUrl: "https://example.invalid/webhook"
-            """;
-
-        var result = NewLoader().Load(yaml);
-
-        var failure = Assert.IsType<ConfigLoadResult.Failure>(result);
-        Assert.Contains(failure.Errors, e => e.Contains("subjects[0].environment"));
+        Assert.Equal("PROD", success.Config.Environment);
     }
 
     [Fact]
@@ -371,15 +553,17 @@ public class ConfigLoaderTests
     {
         const string yaml = """
             version: 1
-            defaultEnvironment: test
+            environment: test
+            intervalMinutes: 60
             subjects:
               - nip: "5260001246"
-                intervalMinutes: 60
+                intervalOffset: 0
                 ksefToken: "literal-token"
                 amountDisplay: gross
                 channels:
                   - type: discord
-                    webhookUrl: "https://example.invalid/webhook"
+                    token: "bot-token"
+                    channelId: "111111111111111111"
             """;
 
         var result = NewLoader().Load(yaml);
@@ -393,15 +577,17 @@ public class ConfigLoaderTests
     {
         const string yaml = """
             version: 1
-            defaultEnvironment: test
+            environment: test
+            intervalMinutes: 60
             subjects:
               - nip: "5260001246"
-                intervalMinutes: 60
+                intervalOffset: 0
                 ksefToken: "literal-token"
                 amountDisplay: netto
                 channels:
                   - type: discord
-                    webhookUrl: "https://example.invalid/webhook"
+                    token: "bot-token"
+                    channelId: "111111111111111111"
             """;
 
         var result = NewLoader().Load(yaml);
@@ -415,14 +601,16 @@ public class ConfigLoaderTests
     {
         const string yaml = """
             version: 1
-            defaultEnvironment: test
+            environment: test
+            intervalMinutes: 60
             subjects:
               - nip: "5260001246"
-                intervalMinutes: 60
+                intervalOffset: 0
                 ksefToken: "${KSEF_TOKEN}"
                 channels:
                   - type: discord
-                    webhookUrl: "https://example.invalid/webhook"
+                    token: "bot-token"
+                    channelId: "111111111111111111"
             """;
         var env = new Dictionary<string, string> { ["KSEF_TOKEN"] = "resolved-secret-value" };
 
@@ -437,14 +625,16 @@ public class ConfigLoaderTests
     {
         const string yaml = """
             version: 1
-            defaultEnvironment: test
+            environment: test
+            intervalMinutes: 60
             subjects:
               - nip: "5260001246"
-                intervalMinutes: 60
+                intervalOffset: 0
                 ksefToken: "${KSEF_TOKEN}"
                 channels:
                   - type: discord
-                    webhookUrl: "https://example.invalid/webhook"
+                    token: "bot-token"
+                    channelId: "111111111111111111"
             """;
 
         var result = NewLoader().Load(yaml);
@@ -461,20 +651,23 @@ public class ConfigLoaderTests
         // even though a genuine secret value passed through the loader.
         const string yaml = """
             version: 1
-            defaultEnvironment: test
+            environment: test
+            intervalMinutes: 60
             subjects:
               - nip: "5260001246"
-                intervalMinutes: 60
+                intervalOffset: 0
                 ksefToken: "super-secret-value"
                 channels:
                   - type: discord
-                    webhookUrl: "https://example.invalid/webhook"
+                    token: "bot-token"
+                    channelId: "111111111111111111"
               - nip: ""
-                intervalMinutes: 60
+                intervalOffset: 0
                 ksefToken: "another-secret"
                 channels:
                   - type: discord
-                    webhookUrl: "https://example.invalid/webhook"
+                    token: "bot-token"
+                    channelId: "111111111111111111"
             """;
 
         var result = NewLoader().Load(yaml);

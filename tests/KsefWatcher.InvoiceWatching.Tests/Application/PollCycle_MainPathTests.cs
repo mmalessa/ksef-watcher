@@ -30,4 +30,25 @@ public class PollCycle_MainPathTests
         Assert.Null(sw.PendingWindow);
         Assert.Empty(notifier.Calls);
     }
+
+    [Fact]
+    public async Task NothingNew_ReturnsOutcomeWithZeroCounts_AndTheAdvancedHwm()
+    {
+        var previousHwm = new Hwm(DateTimeOffset.Parse("2026-01-01T00:00:00Z"));
+        var newHwm = new Hwm(DateTimeOffset.Parse("2026-01-01T01:00:00Z"));
+        var sw = new SubjectWatch(AnySubjectId, new HashSet<InvoiceReference>(), previousHwm);
+        var repository = new FakeSubjectWatchRepository(sw);
+        var provider = new FakeInvoiceListProvider(new FetchedWindow(new HashSet<InvoiceReference>(), [], newHwm));
+        var notifier = new FakeNotifier((_, _) => new DeliveryResult.Confirmed());
+        var delay = new FakeDelay();
+        var sut = new PollCycle(repository, provider, notifier, delay);
+
+        var outcome = await sut.RunAsync(AnySubjectId, AnyChannel, AmountDisplay.Brutto, AnyInterval, CancellationToken.None);
+
+        Assert.False(outcome.IsBaseline);
+        Assert.Equal(0, outcome.FetchedCount);
+        Assert.Equal(0, outcome.DetectedCount);
+        Assert.Equal(0, outcome.NotifiedCount);
+        Assert.Equal(newHwm, outcome.Hwm);
+    }
 }

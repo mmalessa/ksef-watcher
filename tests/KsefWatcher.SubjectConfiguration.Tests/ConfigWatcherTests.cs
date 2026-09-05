@@ -10,26 +10,30 @@ public class ConfigWatcherTests
 
     private const string ValidYaml = """
         version: 1
-        defaultEnvironment: test
+        environment: test
+        intervalMinutes: 60
         subjects:
           - nip: "5260001246"
-            intervalMinutes: 60
+            intervalOffset: 0
             ksefToken: "token-a"
             channels:
               - type: discord
-                webhookUrl: "https://example.invalid/a"
+                token: "bot-token-a"
+                channelId: "111111111111111111"
         """;
 
     private const string InvalidYaml = """
         version: 1
-        defaultEnvironment: test
+        environment: test
+        intervalMinutes: 60
         subjects:
           - nip: ""
-            intervalMinutes: 60
+            intervalOffset: 0
             ksefToken: "token-a"
             channels:
               - type: discord
-                webhookUrl: "https://example.invalid/a"
+                token: "bot-token-a"
+                channelId: "111111111111111111"
         """;
 
     [Fact]
@@ -50,14 +54,16 @@ public class ConfigWatcherTests
 
     private const string ValidYamlV2 = """
         version: 1
-        defaultEnvironment: test
+        environment: test
+        intervalMinutes: 60
         subjects:
           - nip: "9999999999"
-            intervalMinutes: 60
+            intervalOffset: 0
             ksefToken: "token-b"
             channels:
               - type: discord
-                webhookUrl: "https://example.invalid/b"
+                token: "bot-token-b"
+                channelId: "222222222222222222"
         """;
 
     [Fact]
@@ -110,7 +116,8 @@ public class ConfigWatcherTests
     {
         const string malformedYaml = """
             version: 1
-            defaultEnvironment: test
+            environment: test
+            intervalMinutes: 60
             subjects: [
             """;
         var watcher = ConfigWatcher.Start(NewLoader(), ValidYaml);

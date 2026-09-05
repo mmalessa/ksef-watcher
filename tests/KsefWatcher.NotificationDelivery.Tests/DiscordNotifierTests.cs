@@ -8,7 +8,7 @@ namespace KsefWatcher.NotificationDelivery.Tests;
 
 public class DiscordNotifierTests
 {
-    private static ChannelRef AnyChannel => new("discord", "https://example.invalid/webhook/abc");
+    private static ChannelRef AnyChannel => new("discord", "123456789012345678", "bot-token-abc");
 
     [Fact]
     public void ChannelType_IsDiscord()
@@ -39,7 +39,9 @@ public class DiscordNotifierTests
         var outcome = await sut.SendAsync(AnyChannel, "New invoice received", CancellationToken.None);
 
         Assert.IsType<ChannelSendOutcome.Acknowledged>(outcome);
-        Assert.Equal(AnyChannel.Target, handler.LastRequest!.RequestUri!.ToString());
+        Assert.Equal($"https://discord.com/api/v10/channels/{AnyChannel.Target}/messages", handler.LastRequest!.RequestUri!.ToString());
+        Assert.Equal("Bot", handler.LastRequest.Headers.Authorization?.Scheme);
+        Assert.Equal(AnyChannel.Credential, handler.LastRequest.Headers.Authorization?.Parameter);
         Assert.Contains("New invoice received", handler.LastRequestBody);
     }
 

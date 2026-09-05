@@ -1,44 +1,57 @@
 # KSeF Watcher — configuration template.
 #
-# Copy this file to `config.yaml` next to the `ksef-watcher` binary (or to
-# /etc/ksef-watcher/config.yaml) and fill in real values. Hot-reloaded — edit it in place while
-# the daemon is running and changes apply automatically; an invalid edit is rejected and logged,
-# the last valid configuration keeps running.
+# Copy this file to `config.yaml` next to the `ksef-watcher` binary, or to
+# /etc/ksef-watcher/config.yaml (the default search location — pass --config <path> to point
+# at a different file). Hot-reloaded — edit it in place while the daemon is running and changes
+# apply automatically; an invalid edit is rejected and logged, the last valid configuration keeps
+# running.
 
 version: 1 # schema version — currently only 1 is supported
 
-# Environment every subject uses unless it sets its own `environment` below (OQ-9).
-# One of: test | demo | prod. New subjects default here on purpose — switching one to prod
-# is a deliberate, visible act, not an accident.
-defaultEnvironment: test
+# KSeF environment for every subject — no per-subject override. One of: test | demo | prod.
+environment: test
+
+# How often every subject is polled, in minutes. Minimum 15 (MF recommendation), maximum 10080
+# (7 days). Shared by all subjects — see subjects[].intervalOffset below to spread them out.
+intervalMinutes: 60
+
+# Optional — path to the SQLite state database. Defaults to `state.db` next to this config file.
+# databasePath: /var/lib/ksef-watcher/state.db
 
 subjects:
   # Add one entry per company (NIP) you want watched. At least one is required.
   - nip: "0000000000" # the company's NIP, with a valid checksum
 
-    intervalMinutes: 60 # how often to poll this subject. Minimum 15 (MF recommendation), maximum 10080 (7 days)
+    # Minutes into the shared intervalMinutes window this subject's poll fires at (0 <= offset <
+    # intervalMinutes). Spread subjects across the window so they don't all poll at once — e.g.
+    # with intervalMinutes: 60, one subject at 0, another at 20, another at 40.
+    intervalOffset: 0
 
     # The KSeF token generated for this subject. Either a literal value, or a reference to an
     # environment variable so the token itself never has to live in this file:
     #   ksefToken: "${KSEF_TOKEN_SUBJECT_1}"
     ksefToken: "..."
 
-    # Optional — overrides defaultEnvironment above for this one subject.
-    # environment: test
-
     # Optional — how invoice amounts are shown in notifications. One of: brutto | netto.
     # Defaults to brutto.
     # amountDisplay: brutto
 
-    # Exactly one channel per subject (OQ-12). Discord is the only supported type in V1.
+    # Exactly one channel per subject (OQ-12). One of: discord | logs.
+    # "logs" writes notifications to the daemon's own log instead of a real messenger — handy
+    # while testing/developing, no token/channelId needed.
+    #
+    # discord posts via a bot (not a webhook): invite the bot to your server with the
+    # "Send Messages" permission, then provide its token and the target channel's ID. Both
+    # accept a literal value or a "${VAR}" environment variable reference, same as ksefToken.
     channels:
       - type: discord
-        webhookUrl: "https://discord.com/api/webhooks/..."
+        token: "${DISCORD_TOKEN}"
+        channelId: "${DISCORD_CHANNEL}"
 
   # - nip: "1111111111"
-  #   intervalMinutes: 30
+  #   intervalOffset: 20
   #   ksefToken: "${KSEF_TOKEN_SUBJECT_2}"
-  #   environment: prod
   #   channels:
   #     - type: discord
-  #       webhookUrl: "https://discord.com/api/webhooks/..."
+  #       token: "${DISCORD_TOKEN}"
+  #       channelId: "${DISCORD_CHANNEL}"

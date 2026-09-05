@@ -37,7 +37,7 @@ public sealed class PollCycle
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
-    public async Task RunAsync(SubjectId subjectId, ChannelRef channel, AmountDisplay amountDisplay, TimeSpan configuredInterval, CancellationToken cancellationToken)
+    public async Task<PollOutcome> RunAsync(SubjectId subjectId, ChannelRef channel, AmountDisplay amountDisplay, TimeSpan configuredInterval, CancellationToken cancellationToken)
     {
         var sw = await _repository.LoadAsync(subjectId, cancellationToken);
 
@@ -48,7 +48,7 @@ public sealed class PollCycle
             var baselineFetch = await _provider.FetchWindowedListAsync(subjectId, narrowWindow, cancellationToken);
             sw.ConfirmBaseline(baselineFetch.Hwm);
             await _repository.SaveAsync(sw, cancellationToken);
-            return;
+            return new PollOutcome(IsBaseline: true, FetchedCount: baselineFetch.Refs.Count, DetectedCount: 0, NotifiedCount: 0, Hwm: baselineFetch.Hwm);
         }
 
         var window = sw.PlanFetch();
@@ -68,7 +68,7 @@ public sealed class PollCycle
                 // Failed(Permanent): no point retrying further (I-11). Failed(Retryable) exhausted:
                 // the next scheduled poll re-plans this window (OQ-17c). Either way, the cursor
                 // must not advance past an un-notified ref (I-1) — stop the whole cycle here.
-                return;
+                return new PollOutcome(IsBaseline: false, FetchedCount: fetched.Refs.Count, DetectedCount: unseenRefs.Count, NotifiedCount: i, Hwm: null);
             }
 
             sw.MarkNotified(new HashSet<InvoiceReference> { invoice.Ref });
@@ -83,6 +83,8 @@ public sealed class PollCycle
 
         sw.AdvanceHwm();
         await _repository.SaveAsync(sw, cancellationToken);
+
+        return new PollOutcome(IsBaseline: false, FetchedCount: fetched.Refs.Count, DetectedCount: unseenRefs.Count, NotifiedCount: toSend.Count, Hwm: sw.LastHwm);
     }
 
     /// <summary>

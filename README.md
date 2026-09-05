@@ -6,7 +6,7 @@ A self-hosted, open-source Linux daemon that watches the KSeF (Krajowy System e-
 
 ## What it does
 
-- Periodically polls the **simplified list of invoices received** (KSeF API 2.0) for each configured subject, on a per-subject interval.
+- Periodically polls the **simplified list of invoices received** (KSeF API 2.0) for each configured subject, on a shared interval (with a per-subject offset so they don't all poll at once).
 - Detects new invoices (HWM-cursor window fetch + registry diff — no invoice is ever missed).
 - Sends a notification with the invoice essentials: KSeF reference number, issuer invoice number, gross amount, issuer NIP (one message per invoice).
 - **Discord first**, more messengers later — notifiers are pluggable and community contributions are the natural way to grow.
@@ -18,20 +18,34 @@ A self-hosted, open-source Linux daemon that watches the KSeF (Krajowy System e-
 - **Zero-effort operation.** Plain YAML config file with hot reload; runs unattended as a systemd service.
 - **Respects the KSeF API.** Rate limits, minimum polling interval, the official incremental-retrieval pattern.
 
-## Example configuration (indicative — schema not final yet)
+## Example configuration
 
 ```yaml
+version: 1
+environment: test            # test | demo | prod — one environment for the whole daemon
+intervalMinutes: 60          # shared by every subject, min 15 (MF recommendation)
+# databasePath: /var/lib/ksef-watcher/state.db  # optional, defaults to state.db next to this file
 subjects:
   - nip: "1234567890"
-    intervalMinutes: 60        # per subject, min 15 (MF recommendation)
-    ksefToken: "..."           # token generated in KSeF
-    environment: test          # or prod
+    intervalOffset: 0        # minutes into the shared window this subject polls at
+    ksefToken: "..."         # token generated in KSeF
     channels:
-      - type: discord
-        webhookUrl: "https://discord.com/api/webhooks/..."
+      - type: discord        # or "logs" — writes to the daemon's log, handy while testing
+        token: "${DISCORD_TOKEN}"      # bot token — invite the bot with the Send Messages permission
+        channelId: "${DISCORD_CHANNEL}"
 ```
 
-The config file is searched in the binary's directory (`./config.yaml`) and then in `/etc/ksef-watcher/config.yaml`. A fully-commented starting point is at [`config.yaml.dist`](config.yaml.dist) — copy it to `config.yaml` and fill in your subjects.
+The config file defaults to `/etc/ksef-watcher/config.yaml`; pass `--config <path>` to use a
+different location. A fully-commented starting point is at [`config.yaml.dist`](config.yaml.dist)
+— copy it and fill in your subjects.
+
+A subject's first-ever poll only establishes its HWM cursor and sends nothing (any invoice already
+in KSeF at that point is by design never notified — only invoices arriving afterwards are). To make
+a subject re-run that first poll (e.g. while testing), forget its state with:
+
+```sh
+ksef-watcher --config <path> --reset-hwm <nip>
+```
 
 ## Building
 
@@ -56,8 +70,8 @@ make publish
 
 Produces a single self-contained executable at `./bin/ksef-watcher` — no .NET runtime needed on
 the target machine, nothing else to copy alongside it. Defaults to `linux-x64`; cross-compile for
-another target with `make publish PUBLISH_RID=linux-arm64`. Drop it wherever `config.yaml` will
-live (see above) and run it directly.
+another target with `make publish PUBLISH_RID=linux-arm64`. Run it with `--config <path>` or drop
+a `config.yaml` at `/etc/ksef-watcher/config.yaml` (see above).
 
 ## Status
 

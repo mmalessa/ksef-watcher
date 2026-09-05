@@ -42,6 +42,10 @@ public sealed class KsefClientAdapter(
                 credentials.Nip,
                 credentials.Token,
                 cryptographyService,
+                // The vendor library defaults to ECDsa, but the real KSeF sandbox issues an RSA
+                // certificate for KsefTokenEncryption — ECDsa fails against it with "Nie znaleziono
+                // klucza ECDSA." (verified against a real poll cycle).
+                encryptionMethod: EncryptionMethodEnum.Rsa,
                 cancellationToken: cancellationToken);
 
             return new KsefSession(result.AccessToken.Token, credentials.Environment);

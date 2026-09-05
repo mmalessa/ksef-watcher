@@ -8,6 +8,8 @@ namespace KsefWatcher.SubjectConfiguration;
 public sealed class ConfigFile
 {
     public int Version { get; set; } = 1;
-    public string DefaultEnvironment { get; set; } = "test"; // OQ-9
+    public string Environment { get; set; } = "test"; // OQ-9 — single environment for the whole daemon, no per-subject override
+    public int IntervalMinutes { get; set; } = 60; // OQ-19: default 60, min 15 (I-13a) — shared by every subject
+    public string? DatabasePath { get; set; } // null = Host default (state.db next to config.yaml)
     public List<SubjectConfig> Subjects { get; set; } = new();
 }

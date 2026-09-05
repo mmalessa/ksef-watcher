@@ -11,15 +11,16 @@ public class ConfigCredentialsStoreTests
 
     private const string Yaml = """
         version: 1
-        defaultEnvironment: test
+        environment: prod
+        intervalMinutes: 60
         subjects:
           - nip: "5260001246"
-            intervalMinutes: 60
+            intervalOffset: 0
             ksefToken: "token-a"
-            environment: prod
             channels:
               - type: discord
-                webhookUrl: "https://example.invalid/a"
+                token: "bot-token-a"
+                channelId: "111111111111111111"
         """;
 
     [Fact]
@@ -47,15 +48,16 @@ public class ConfigCredentialsStoreTests
     {
         const string reloadedYaml = """
             version: 1
-            defaultEnvironment: test
+            environment: prod
+            intervalMinutes: 60
             subjects:
               - nip: "5260001246"
-                intervalMinutes: 60
+                intervalOffset: 0
                 ksefToken: "token-b"
-                environment: prod
                 channels:
                   - type: discord
-                    webhookUrl: "https://example.invalid/a"
+                    token: "bot-token-a"
+                    channelId: "111111111111111111"
             """;
         var watcher = NewWatcher(Yaml);
         var sut = new ConfigCredentialsStore(watcher);

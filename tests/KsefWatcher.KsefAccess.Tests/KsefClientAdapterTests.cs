@@ -41,6 +41,22 @@ public class KsefClientAdapterTests
     }
 
     [Fact]
+    public async Task OpenSessionAsync_UsesRsaEncryptionMethod()
+    {
+        // The real KSeF sandbox issues an RSA certificate for KsefTokenEncryption, not ECDSA
+        // (verified against a real poll cycle) — the vendor library's own default (ECDsa) fails
+        // with "Nie znaleziono klucza ECDSA." against that certificate.
+        var authCoordinator = new FakeAuthCoordinator((_, _, _, _) =>
+            new AuthenticationOperationStatusResponse { AccessToken = new TokenInfo { Token = "access-token" } });
+        var sut = NewSut(authCoordinator, new FakeCryptographyService(), new FakeInvoiceDownloadClient((_, _, _, _) => throw new NotSupportedException()));
+
+        await sut.OpenSessionAsync(AnyCredentials, CancellationToken.None);
+
+        var call = Assert.Single(authCoordinator.AuthKsefTokenCalls);
+        Assert.Equal(EncryptionMethodEnum.Rsa, call.EncryptionMethod);
+    }
+
+    [Fact]
     public async Task OpenSessionAsync_RateLimited_ClassifiesAsOurRateLimitedException_PreservingRecommendedDelay()
     {
         var authCoordinator = new FakeAuthCoordinator((_, _, _, _) =>

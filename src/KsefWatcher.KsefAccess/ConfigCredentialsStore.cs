@@ -18,6 +18,6 @@ public sealed class ConfigCredentialsStore(ConfigWatcher configWatcher) : ICrede
             throw new InvalidOperationException($"No configuration for subject '{subjectId.Nip}' — should be impossible; the scheduler only polls configured subjects.");
         }
 
-        return new SubjectCredentials(subject.Nip, subject.KsefToken, subject.Environment!);
+        return new SubjectCredentials(subject.Nip, subject.KsefToken, configWatcher.Current.Environment);
     }
 }

@@ -4,5 +4,6 @@ namespace KsefWatcher.SubjectConfiguration;
 public sealed class ChannelConfig
 {
     public string Type { get; set; } = string.Empty;
-    public string? WebhookUrl { get; set; }
+    public string? Token { get; set; } // Discord bot token, e.g. "${DISCORD_TOKEN}"
+    public string? ChannelId { get; set; } // Discord channel ID, e.g. "${DISCORD_CHANNEL}"
 }

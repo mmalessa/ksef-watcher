@@ -1,0 +1,23 @@
+[Unit]
+Description=KSeF Watcher
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ksef-watcher
+Group=ksef-watcher
+WorkingDirectory=/opt/ksef-watcher
+ExecStart=/opt/ksef-watcher/bin/ksef-watcher
+Restart=on-failure
+RestartSec=5s
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-write
+ReadWritePaths=/opt/ksef-watcher /var/lib/ksef-watcher
+
+[Install]
+WantedBy=multi-user.target

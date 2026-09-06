@@ -62,8 +62,7 @@ public sealed class HeartbeatScheduler(
                 return; // removed between scheduling and firing; ConfigReloadCoordinator already stopped this timer
             }
 
-            var channelConfig = subject.Channels[0]; // V1: exactly one channel per subject (OQ-12)
-            var channel = new ChannelRef(channelConfig.Type, channelConfig.ChannelId ?? string.Empty, channelConfig.Token);
+            var channel = subject.Channels[0].ToChannelRef(); // V1: exactly one channel per subject (OQ-12)
             var asOf = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
 
             await notifier.SendHeartbeatAsync(channel, asOf, CancellationToken.None);

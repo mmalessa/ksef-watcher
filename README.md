@@ -31,8 +31,7 @@ subjects:
     ksefToken: "..."         # token generated in KSeF
     channels:
       - type: discord        # or "logs" — writes to the daemon's log, handy while testing
-        token: "${DISCORD_TOKEN}"      # bot token — invite the bot with the Send Messages permission
-        channelId: "${DISCORD_CHANNEL}"
+        webhookUrl: "${DISCORD_WEBHOOK_URL}"   # or token + channelId (bot); webhook takes priority if both are set
 ```
 
 The config file defaults to `/etc/ksef-watcher/config.yaml`; pass `--config <path>` to use a

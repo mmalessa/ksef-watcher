@@ -117,6 +117,12 @@ public sealed class ConfigLoader(IEnvironmentVariables environmentVariables)
                 continue;
             }
 
+            channel.WebhookUrl = ResolveEnvVarReference(channel.WebhookUrl, $"subjects[{index}].channels[{c}].webhookUrl", errors);
+            if (!string.IsNullOrWhiteSpace(channel.WebhookUrl))
+            {
+                continue; // webhook takes priority: token/channelId not required when it's set
+            }
+
             channel.Token = ResolveEnvVarReference(channel.Token, $"subjects[{index}].channels[{c}].token", errors);
             channel.ChannelId = ResolveEnvVarReference(channel.ChannelId, $"subjects[{index}].channels[{c}].channelId", errors);
 

@@ -45,6 +45,21 @@ public class DiscordNotifierTests
         Assert.Contains("New invoice received", handler.LastRequestBody);
     }
 
+    [Fact]
+    public async Task WebhookMode_PostsDirectlyToTargetUrl_WithoutAuthorizationHeader_ReturnsAcknowledged()
+    {
+        var webhookChannel = new ChannelRef("discord", "https://discord.com/api/webhooks/123/abc", Credential: null);
+        var handler = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.NoContent));
+        var sut = new DiscordNotifier(new FakeHttpClientFactory(() => new HttpClient(handler)));
+
+        var outcome = await sut.SendAsync(webhookChannel, "New invoice received", CancellationToken.None);
+
+        Assert.IsType<ChannelSendOutcome.Acknowledged>(outcome);
+        Assert.Equal(webhookChannel.Target, handler.LastRequest!.RequestUri!.ToString());
+        Assert.Null(handler.LastRequest.Headers.Authorization);
+        Assert.Contains("New invoice received", handler.LastRequestBody);
+    }
+
     [Theory]
     [InlineData(HttpStatusCode.TooManyRequests)]
     [InlineData(HttpStatusCode.NotFound)]

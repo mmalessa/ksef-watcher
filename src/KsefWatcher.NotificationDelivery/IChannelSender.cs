@@ -4,9 +4,8 @@ namespace KsefWatcher.NotificationDelivery;
 
 /// <summary>
 /// The ACL seam for one messenger family (docs/08_notification_delivery_tactical_model.md:
-/// "Each adapter is a thin ACL over its messenger API"). A future <c>DiscordNotifier</c>
-/// implements this over a real webhook call; not wired in yet, so <see cref="DeliveryService"/>'s
-/// resolution and classification logic can be built and tested against it now, independently.
+/// "Each adapter is a thin ACL over its messenger API"). <c>DiscordNotifier</c> implements this
+/// over the Discord Bot API or a webhook, resolved by <see cref="DeliveryService"/> per <c>ChannelRef.Type</c>.
 /// </summary>
 public interface IChannelSender
 {

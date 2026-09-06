@@ -383,6 +383,73 @@ public class ConfigLoaderTests
     }
 
     [Fact]
+    public void DiscordChannel_WithWebhookUrl_WithoutTokenOrChannelId_IsAccepted()
+    {
+        const string yaml = """
+            version: 1
+            environment: test
+            intervalMinutes: 60
+            subjects:
+              - nip: "5260001246"
+                intervalOffset: 0
+                ksefToken: "literal-token"
+                channels:
+                  - type: discord
+                    webhookUrl: "https://discord.com/api/webhooks/123/abc"
+            """;
+
+        var result = NewLoader().Load(yaml);
+
+        var success = Assert.IsType<ConfigLoadResult.Success>(result);
+        Assert.Equal("https://discord.com/api/webhooks/123/abc", success.Config.Subjects[0].Channels[0].WebhookUrl);
+    }
+
+    [Fact]
+    public void DiscordWebhookUrl_EnvVarReference_ResolvesFromEnvironment()
+    {
+        const string yaml = """
+            version: 1
+            environment: test
+            intervalMinutes: 60
+            subjects:
+              - nip: "5260001246"
+                intervalOffset: 0
+                ksefToken: "literal-token"
+                channels:
+                  - type: discord
+                    webhookUrl: "${DISCORD_WEBHOOK_URL}"
+            """;
+        var env = new Dictionary<string, string> { ["DISCORD_WEBHOOK_URL"] = "https://discord.com/api/webhooks/123/abc" };
+
+        var result = NewLoader(env).Load(yaml);
+
+        var success = Assert.IsType<ConfigLoadResult.Success>(result);
+        Assert.Equal("https://discord.com/api/webhooks/123/abc", success.Config.Subjects[0].Channels[0].WebhookUrl);
+    }
+
+    [Fact]
+    public void DiscordWebhookUrl_EnvVarReference_MissingVariable_FailsValidation_NamingTheVariable()
+    {
+        const string yaml = """
+            version: 1
+            environment: test
+            intervalMinutes: 60
+            subjects:
+              - nip: "5260001246"
+                intervalOffset: 0
+                ksefToken: "literal-token"
+                channels:
+                  - type: discord
+                    webhookUrl: "${DISCORD_WEBHOOK_URL}"
+            """;
+
+        var result = NewLoader().Load(yaml);
+
+        var failure = Assert.IsType<ConfigLoadResult.Failure>(result);
+        Assert.Contains(failure.Errors, e => e.Contains("subjects[0].channels[0].webhookUrl") && e.Contains("DISCORD_WEBHOOK_URL"));
+    }
+
+    [Fact]
     public void DiscordToken_EnvVarReference_ResolvesFromEnvironment()
     {
         const string yaml = """

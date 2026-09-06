@@ -6,11 +6,11 @@ using KsefWatcher.InvoiceWatching.ValueObjects;
 namespace KsefWatcher.NotificationDelivery.Notifiers;
 
 /// <summary>
-/// Thin ACL over the Discord Bot API (docs/08_notification_delivery_tactical_model.md) — the
-/// only place Discord-specific concepts appear. V1's only notifier. Receives an already-rendered
-/// message (<see cref="NotificationRenderer"/> runs in <c>DeliveryService</c>, upstream) — this
-/// class only knows how to post text to a channel (bot token + channel ID, not a webhook) and
-/// classify the raw transport outcome.
+/// Thin ACL over the Discord Bot API and webhooks (docs/08_notification_delivery_tactical_model.md)
+/// — the only place Discord-specific concepts appear. V1's only notifier. Receives an
+/// already-rendered message (<see cref="NotificationRenderer"/> runs in <c>DeliveryService</c>,
+/// upstream) — this class only knows how to post text to a channel (bot token + channel ID, or a
+/// webhook URL when <see cref="ChannelRef.Credential"/> is null) and classify the raw transport outcome.
 /// </summary>
 public sealed class DiscordNotifier(IHttpClientFactory httpClientFactory) : IChannelSender
 {
@@ -19,11 +19,16 @@ public sealed class DiscordNotifier(IHttpClientFactory httpClientFactory) : ICha
     public async Task<ChannelSendOutcome> SendAsync(ChannelRef channel, string message, CancellationToken cancellationToken)
     {
         var payload = JsonSerializer.Serialize(new { content = message });
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"https://discord.com/api/v10/channels/{channel.Target}/messages")
+        var isWebhook = channel.Credential is null; // webhook URL embeds its own auth; bot mode always has a token (ConfigLoader requires it)
+        var url = isWebhook ? channel.Target : $"https://discord.com/api/v10/channels/{channel.Target}/messages";
+        using var request = new HttpRequestMessage(HttpMethod.Post, url)
         {
             Content = new StringContent(payload, Encoding.UTF8, "application/json"),
         };
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bot", channel.Credential);
+        if (!isWebhook)
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bot", channel.Credential);
+        }
 
         try
         {

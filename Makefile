@@ -20,12 +20,15 @@ DOCKER_RUN := docker run --rm \
 
 PUBLISH_RID ?= linux-x64
 
-.PHONY: init restore build test publish clean format shell
+.PHONY: init restore build test publish clean format shell help
+help:
+	@grep -E '(^[a-zA-Z0-9_-]+:.*?##.*$$)|(^##)' Makefile | awk 'BEGIN {FS = ":.*?## "}{printf "\033[32m%-30s\033[0m %s\n", $$1, $$2}' | sed -e 's/\[32m##/[33m/'
+
 
 # Fetches the vendored KSeF client at its pinned commit and applies the required net8.0-only
 # patch (our SDK image can't even restore a net9.0/net10.0-multi-targeted project). Idempotent —
 # safe to re-run; skips the clone if $(VENDOR_DIR) already exists.
-init:
+init: ## init source code
 	@if [ -d $(VENDOR_DIR) ]; then \
 		echo "$(VENDOR_DIR) already exists — skipping clone (remove it first to re-fetch)."; \
 	else \
@@ -36,13 +39,13 @@ init:
 		$(VENDOR_DIR)/KSeF.Client/KSeF.Client.csproj \
 		$(VENDOR_DIR)/KSeF.Client.ClientFactory/KSeF.Client.ClientFactory.csproj
 
-restore:
+restore: ## dotnet restore
 	$(DOCKER_RUN) dotnet restore $(SOLUTION)
 
-build: restore
+build: restore ## build 
 	$(DOCKER_RUN) dotnet build $(SOLUTION) --configuration $(CONFIGURATION) --no-restore
 
-test: restore
+test: restore ## test
 	$(DOCKER_RUN) dotnet test $(SOLUTION) --configuration $(CONFIGURATION) --no-restore
 
 # Single self-contained binary at ./bin/ksef-watcher (no .NET runtime needed on the target
@@ -51,7 +54,7 @@ test: restore
 # Publishes straight into ./bin without wiping it first — DebugType=embedded and
 # GenerateDocumentationFile=false below mean dotnet publish only ever writes the one binary file,
 # so anything else you keep there (e.g. your own config.yaml) survives repeated publishes.
-publish:
+publish: ## create self-contained binary
 	$(DOCKER_RUN) dotnet publish src/KsefWatcher.Host/KsefWatcher.Host.csproj \
 		--configuration $(CONFIGURATION) \
 		--runtime $(PUBLISH_RID) \
@@ -62,15 +65,15 @@ publish:
 		-p:GenerateDocumentationFile=false \
 		-o bin
 
-format:
+format: ## dotnet format
 	$(DOCKER_RUN) dotnet format $(SOLUTION)
 
-clean:
+clean: ## dotnet clean
 	$(DOCKER_RUN) dotnet clean $(SOLUTION) || true
 	find . -type d \( -name bin -o -name obj \) -not -path './.git/*' -prune -exec rm -rf {} +
 
 # Interactive SDK shell for ad-hoc commands (dotnet add package, dotnet new, …).
-shell:
+shell: ## interactive shell inside container
 	docker run --rm -it \
 		-v $(CURDIR):/src \
 		-v $(NUGET_CACHE_VOL):/root/.nuget/packages \

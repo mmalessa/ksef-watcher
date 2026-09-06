@@ -38,20 +38,25 @@ subjects:
 
     # Exactly one channel per subject (OQ-12). One of: discord | logs.
     # "logs" writes notifications to the daemon's own log instead of a real messenger — handy
-    # while testing/developing, no token/channelId needed.
+    # while testing/developing, no token/channelId/webhookUrl needed.
     #
-    # discord posts via a bot (not a webhook): invite the bot to your server with the
-    # "Send Messages" permission, then provide its token and the target channel's ID. Both
-    # accept a literal value or a "${VAR}" environment variable reference, same as ksefToken.
+    # discord posts via either a webhook or a bot — pick one:
+    #   - webhookUrl: create a webhook in the target channel's settings and paste its URL. Simplest
+    #     option, no bot needed. Takes priority if both are set.
+    #   - token + channelId: invite a bot to your server with the "Send Messages" permission, then
+    #     provide its token and the target channel's ID.
+    # All three fields accept a literal value or a "${VAR}" environment variable reference, same as
+    # ksefToken.
     channels:
       - type: discord
-        token: "${DISCORD_TOKEN}"
-        channelId: "${DISCORD_CHANNEL}"
+        webhookUrl: "${DISCORD_WEBHOOK_URL}"
+      # or, without a webhook:
+      #   token: "${DISCORD_TOKEN}"
+      #   channelId: "${DISCORD_CHANNEL}"
 
   # - nip: "1111111111"
   #   intervalOffset: 20
   #   ksefToken: "${KSEF_TOKEN_SUBJECT_2}"
   #   channels:
   #     - type: discord
-  #       token: "${DISCORD_TOKEN}"
-  #       channelId: "${DISCORD_CHANNEL}"
+  #       webhookUrl: "${DISCORD_WEBHOOK_URL}"
